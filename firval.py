@@ -4,7 +4,6 @@ import re
 import datetime
 from voluptuous import Schema,Required,All,Invalid,Match,In
 from netaddr import IPNetwork
-import pprint
 
 class ParseError(Exception):
     pass
@@ -94,7 +93,6 @@ class Firval():
         })(data)
         return data
 
-    
     def __str__(self):
         data = self.data
         ln = []
@@ -185,9 +183,10 @@ class Firval():
                 ln.append(':{} ACCEPT [0:0]'.format(chain.upper()))
 
             # custom routing chains
+            import pprint
             for chain in rules[table]:
-                subchain = '{}-{}'.format(ruleset, chain).lower()
-                ln.append(':{} - [0:0]'.format(subchain))
+                for ruleset in rules[table][chain]:
+                    ln.append(':{}-{} - [0:0]'.format(ruleset, chain.lower()))
 
             # routing rules
             for chain in routing[table]:
@@ -300,7 +299,7 @@ class _Rule():
                 raise ParseError('service conflicts with dport or proto:', self.service)
             service = self._get_service(self.service)
             if service is None:
-                raise ParseError('unknown service:' + self.service)
+                raise ParseError('unknown service: ' + self.service)
             r.extend(['-p', service['proto']])
             if service['proto'] in ['tcp', 'udp']:
                 r.extend(['--dport', str(service['port'])])
