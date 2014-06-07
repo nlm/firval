@@ -176,6 +176,8 @@ class Firval():
 
         # Tables ##############################################################
         for table in rules:
+            if len(ln) > 1:
+                ln.append("COMMIT")
             ln.append("*{}".format(table))
 
             # system chains
