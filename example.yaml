@@ -1,0 +1,60 @@
+interfaces:
+  mgt: eth0
+  sup: eth1
+  pub: eth2
+  cool: bond0
+
+addresses:
+  vtydc2-p10is-mirror01: 192.17.23.23
+  p10-net-sup: 172.16.0.0/12
+  vtydc2-p10-net-notreally: 172.16.1.0/12
+  host1: 1.1.1.1
+  host2: 2.2.2.2
+
+ports:
+  http: 80
+  https: 443
+
+services:
+  http:
+      proto: tcp
+      port: 80
+  dns:
+      proto: udp
+      port: 53
+  ping:
+      proto: icmp
+      type: echo-request
+
+rulesets:
+  # implicitely defines interfaces names if1-to-if2, any is special
+  mgt-to-sup:
+    # creates chain mgt-to-sup-forward
+    filter:
+      input:
+        - accept state established
+        - log
+        - drop
+      forward:
+        - accept from host1 to host2 service dns
+        - accept from host1 to host2 port http
+        - accept from p10-net-sup port 3555 to any
+        - accept from p10-net-sup to nonexist-host service http
+        - drop
+  # rules with 'any' will come last
+  # iptables -A FORWARD -o eth2 -j fw-any-to-pub
+  cool-to-cool:
+    filter:
+      input:
+        - drop
+      
+  any-to-pub:
+    # nat: name of the table (filter, nat, mangle)
+    nat:
+      postrouting:
+        # iptables -t nat -A FORWARD -s ... -d 0.0.0.0/0 -o eth2 -j MASQUERADE
+        - masquerade from vtydc2-p10-net-sup to any
+        # iptables -t nat -A FORWARD 
+        - log prefix "DROP"
+        - drop
+
