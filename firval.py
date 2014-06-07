@@ -102,7 +102,7 @@ class Firval():
         rules = {}
         routing = {}
 
-        # Rulesets ############################################################
+        # Rulesets Generation #################################################
         for ruleset in data['rulesets']:
 
             # Interfaces  #####################################################
@@ -183,7 +183,6 @@ class Firval():
                 ln.append(':{} ACCEPT [0:0]'.format(chain.upper()))
 
             # custom routing chains
-            import pprint
             for chain in rules[table]:
                 for ruleset in rules[table][chain]:
                     ln.append(':{}-{} - [0:0]'.format(ruleset, chain.lower()))
@@ -269,29 +268,33 @@ class _Rule():
                 r.append('!')
             r.extend(['-s', str(self._get_address(self.src_addr))])
 
-        # Source port
-        if not self._is_any(self.src_port):
-            if self.src_port_neg is not None:
-                r.append('!')
-            r.extend(['--sport', str(self._get_port(self.src_port))])
-
         # Destination address
         if not self._is_any(self.dst_addr):
             if self.dst_neg is not None:
                 r.append('!')
             r.extend(['-d', str(self._get_address(self.dst_addr))])
 
-        # Destination port
-        if not self._is_any(self.dst_port):
-            if self.dst_port_neg is not None:
-                r.append('!')
-            r.extend(['--dport', str(self._get_port(self.dst_port))])
-
         # Protocol
         if not self._is_any(self.proto):
             if self.proto_neg is not None:
                 r.append('!')
             r.extend(['-p', str(self.proto)])
+
+        # Source port
+        if not self._is_any(self.src_port):
+            if self._is_any(self.proto):
+                raise ParseError("protocol must be set when using port in '{}'".format(self._text))
+            if self.src_port_neg is not None:
+                r.append('!')
+            r.extend(['--sport', str(self._get_port(self.src_port))])
+
+        # Destination port
+        if not self._is_any(self.dst_port):
+            if self._is_any(self.proto):
+                raise ParseError("protocol must be set when using port in '{}'".format(self._text))
+            if self.dst_port_neg is not None:
+                r.append('!')
+            r.extend(['--dport', str(self._get_port(self.dst_port))])
 
         # Service
         if self.service is not None:
