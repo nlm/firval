@@ -107,7 +107,6 @@ class Firval():
 
             # Interfaces  #####################################################
             (izone, ozone) = re.match('^(\S+)-to-(\S+)$', ruleset).groups()
-            assert izone, ozone
 
             if izone == 'any':
                 iif = None
@@ -214,7 +213,7 @@ class _Rule():
         '(?:(?:\s+(?P<dst_port_neg>not))?\s+port\s+(?P<dst_port>\S+))?)?' + \
         '(?:(?:\s+(?P<proto_neg>not))?\s+proto\s+(?P<proto>tcp|udp|icmp|any))?' + \
         '(?:\s+service\s+(?P<service>\S+))?' + \
-        '(?:\s+state\s+(?P<state>new|established))?' + \
+        '(?:\s+state\s+(?P<state>new|established|invalid))?' + \
         '(?:\s+limit\s+(?P<limit>\d+/\S)(?:\s+burst\s+(?P<limit_burst>\S+)))?' + \
         '(?:\s+comment\s+(?P<comment>"[^"]+"))?' + \
         '(?:\s+prefix\s+(?P<log_prefix>"[^"]+"))?' + \
@@ -315,6 +314,8 @@ class _Rule():
                 r.extend(['-m', 'state', '--state', 'NEW'])
             elif self.state == 'established':
                 r.extend(['-m', 'state', '--state', 'ESTABLISHED,RELATED'])
+            elif self.state == 'invalid':
+                r.extend(['-m', 'state', '--state', 'INVALID'])
 
         # Limit
         if self.limit is not None:
