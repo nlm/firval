@@ -6,8 +6,12 @@ a netfilter firewall rules generator designed designed to be easy to read, write
 How to use
 ==========
 
-Craft a yaml configuration file and make it eat by firval.py,
+Craft a yaml configuration file and make it feed it to firval.py,
 it will produce a iptables-restore compatible rule file
+
+if you want, you can event do this:
+
+    cat rules.yaml | ./firval.py | iptables-restore
 
 Configuration syntax
 ====================
