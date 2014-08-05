@@ -12,33 +12,33 @@ it will produce a iptables-restore compatible rule file
 Configuration syntax
 ====================
 
-interfaces:
-  IFNAME: PHYSICALINTERFACE
+    interfaces:
+      IFNAME: PHYSICALINTERFACE
 
-addresses:
-  ADDRNAME: HOSTADDR | NETADDR
+    addresses:
+      ADDRNAME: HOSTADDR | NETADDR
 
-ports:
-  PORTNAME: PORTNUMBER
+    ports:
+      PORTNAME: PORTNUMBER
 
-services:
-  SERVICENAME:
-    proto: tcp | udp | icmp
-    port: PORT-NUMBER (only for tcp or udp)
-    type: ICMP-TYPE (only for icmp)
+    services:
+      SERVICENAME:
+        proto: tcp | udp | icmp
+        port: PORT-NUMBER (only for tcp or udp)
+        type: ICMP-TYPE (only for icmp)
 
-IFNAME-to-IFNAME:
-  filter|nat|mangle:
-    input|forward|output|...: (availability depends if in 'filter', 'nat' or 'mangle')
-      - RULE
-      - ...
+    IFNAME-to-IFNAME:
+      filter|nat|mangle:
+        input|forward|output|...: (availability depends if in 'filter', 'nat' or 'mangle')
+          - RULE
+          - ...
 
-RULE = (accept|reject|drop|masquerade|log)
-        ((not)? from ADDRNAME ((not)? port PORTNAME)?)?
-        ((not)? to ADDRNAME ((not)? port PORTNAME)?)?
-        ((not)? proto (tcp|udp|icmp|any))?
-        (service SERVICENAME)?
-        (state (new|established|invalid))?
-        (limit INTEGER/TIMEUNIT (burst INTEGER)?)?
-        (comment "COMMENT")?
-        (prefix "LOG_PREFIX")
+    RULE = (accept|reject|drop|masquerade|log)
+            ((not)? from ADDRNAME ((not)? port PORTNAME)?)?
+            ((not)? to ADDRNAME ((not)? port PORTNAME)?)?
+            ((not)? proto (tcp|udp|icmp|any))?
+            (service SERVICENAME)?
+            (state (new|established|invalid))?
+            (limit INTEGER/TIMEUNIT (burst INTEGER)?)?
+            (comment "COMMENT")?
+            (prefix "LOG_PREFIX")
