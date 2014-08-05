@@ -59,19 +59,25 @@ class Firval():
                 All(str, Match(self._re['obj'])):
                     All(str, Match(self._re['if']))
             },
-            'addresses': {
+            Optional('addresses'): {
                 All(str, Match(self._re['obj'])):
                     All(str, self._valid_addr)
             },
-            'ports': {
+            Optional('ports'): {
                 All(str, Match(self._re['obj'])):
                     All(int)
             },
-            'services': {
+            Optional('services'): {
                 All(str, Match(self._re['obj'])): {
                     Required('proto'): All(str, In(self._protos)),
                     'port': int,
                     'type': All(str, In(self._icmptypes)),
+                }
+            },
+            Optional('chains'): {
+                All(str, In(self._syschains.keys())): {
+                    All(str, Match(self._re['obj'])):
+                        [ All(str, Match(_Rule.pattern)) ]
                 }
             },
             'rulesets': {
@@ -101,6 +107,7 @@ class Firval():
 
         rules = {}
         routing = {}
+        custchains = {}
 
         # Rulesets Generation #################################################
         for ruleset in data['rulesets']:
@@ -167,7 +174,17 @@ class Firval():
                     rules[table][chain][ruleset] = []
 
                     for rule in data['rulesets'][ruleset][table][chain]:
-                        rules[table][chain][ruleset].append('-A {}-{} {}'.format(ruleset, chain.lower(), str(_Rule(rule, aliases=self.data))))
+                        rules[table][chain][ruleset].append('-A {}-{} {}'.format(ruleset, chain.lower(), str(_Rule(rule, aliases=self.data, table=table))))
+
+        # Custom Chains Generation ############################################
+
+        if 'chains' in data:
+            for table in data['chains']:
+                custchains[table] = {}
+                for chain in data['chains'][table]:
+                    custchains[table][chain] = []
+                    for rule in data['chains'][table][chain]:
+                        custchains[table][chain].append('-A custom-{} {}'.format(chain.lower(), str(_Rule(rule, aliases=self.data, table=table))))
 
         # Rules Output ########################################################
 
@@ -188,6 +205,10 @@ class Firval():
                 for ruleset in rules[table][chain]:
                     ln.append(':{}-{} - [0:0]'.format(ruleset, chain.lower()))
 
+            # custom chains
+            for chain in custchains[table]:
+                ln.append(':custom-{} - [0:0]'.format(chain.lower()))
+
             # routing rules
             for chain in routing[table]:
                 for rule in routing[table][chain]:
@@ -199,13 +220,18 @@ class Firval():
                     for rule in rules[table][chain][ruleset]:
                         ln.append(rule)
 
+            # custom chain rules
+            for chain in custchains[table]:
+                for rule in custchains[table][chain]:
+                    ln.append(rule)
+
         ln.append('COMMIT')
         ln.append('# finished {}'.format(datetime.datetime.now()))
         return "\n".join(ln)
 
 
 class _Rule():
-    pattern = '^\s*' + \
+    pattern = '^\s*(jump\s+(?P<jump_chain>\S+))|' + \
         '(?P<action>accept|reject|drop|masquerade|log)' + \
         '(?:(?:\s+(?P<src_neg>not))?\s+from\s+(?P<src_addr>\S+)' + \
         '(?:(?:\s+(?P<src_port_neg>not))?\s+port\s+(?P<src_port>\S+))?)?' + \
@@ -220,9 +246,10 @@ class _Rule():
         '(?:\s+prefix\s+(?P<log_prefix>"[^"]+"))?' + \
         '\s*$'
 
-    def __init__(self, text, aliases=None):
+    def __init__(self, text, aliases=None, table=None):
         self._text = text
         self._aliases = aliases if aliases is not None else {}
+        self._table = table if table is not None else ''
         self._parse(text)
 
     def __getattr__(self, name):
@@ -255,6 +282,12 @@ class _Rule():
     def _get_service(self, name):
         try:
             return self._aliases['services'][name]
+        except KeyError:
+            return None
+
+    def _get_chain(self, table, name):
+        try:
+            return self._aliases['chains'][table][name]
         except KeyError:
             return None
 
@@ -344,6 +377,13 @@ class _Rule():
                 raise ParseError("log prefix requires 'log' action")
         elif self.action == 'log':
             r.extend(['--log-prefix', 'AUTO-PREFIX'])
+
+        # Jump to custom chain
+        if self.jump_chain is not None:
+            if self._get_chain(self._table, self.jump_chain):
+                r.extend(['-j', 'custom-{}'.format(self.jump_chain)])
+            else:
+                raise ParseError("unknown chain: " + self.jump_chain)
 
         # Comment
         if self.comment is None:
