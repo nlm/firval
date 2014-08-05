@@ -2,7 +2,7 @@
 
 import re
 import datetime
-from voluptuous import Schema,Required,All,Invalid,Match,In
+from voluptuous import Schema,Required,Optional,All,Invalid,Match,In
 from netaddr import IPNetwork
 
 class ParseError(Exception):
@@ -11,10 +11,10 @@ class ParseError(Exception):
 
 class Firval():
     _re = {
-        'obj': '^[a-zA-Z0-9-]{1,32}$',
+        'obj': '^[a-zA-Z0-9-_]{1,32}$',
         'zone': '^[a-z0-9]+$',
-        'if': '^[a-z0-9:]+$',
-        'ruleset': '^[a-z0-9]+-to-[a-z0-9]+$',
+        'if': '^[a-z0-9:.]+$',
+        'ruleset': '^[a-z0-9_]+-to-[a-z0-9]+$',
     }
 
     _protos = ['tcp', 'udp', 'icmp']
@@ -212,6 +212,7 @@ class _Rule():
         '(?:(?:\s+(?P<dst_neg>not))?\s+to\s+(?P<dst_addr>\S+)' + \
         '(?:(?:\s+(?P<dst_port_neg>not))?\s+port\s+(?P<dst_port>\S+))?)?' + \
         '(?:(?:\s+(?P<proto_neg>not))?\s+proto\s+(?P<proto>tcp|udp|icmp|any))?' + \
+        '(?:(?:\s+(?P<icmp_type_neg>not))?\s+type\s+(?P<icmp_type>\S+))?' + \
         '(?:\s+service\s+(?P<service>\S+))?' + \
         '(?:\s+state\s+(?P<state>new|established|invalid))?' + \
         '(?:\s+limit\s+(?P<limit>\d+/\S)(?:\s+burst\s+(?P<limit_burst>\S+)))?' + \
@@ -296,6 +297,14 @@ class _Rule():
             if self.dst_port_neg is not None:
                 r.append('!')
             r.extend(['--dport', str(self._get_port(self.dst_port))])
+
+        # ICMP Type
+        if not self._is_any(self.icmp_type):
+            if self._is_any(self.proto):
+                raise ParseError("protocol must be set when using icmp type in '{}'".format(self._text))
+            if self.icmp_type_neg is not None:
+                r.append('!')
+            r.extend(['--icmp-type', str(self.icmp_type)])
 
         # Service
         if self.service is not None:
