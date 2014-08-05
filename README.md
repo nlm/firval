@@ -25,6 +25,12 @@ Configuration syntax
     ports:
       PORTNAME: PORTNUMBER
 
+    chains:
+      filter|nat|mangle:
+        CHAINNAME:
+          - RULE
+          - ...
+
     services:
       SERVICENAME:
         proto: tcp | udp | icmp
@@ -37,7 +43,7 @@ Configuration syntax
           - RULE
           - ...
 
-    RULE = (accept|reject|drop|masquerade|log)
+    RULE = ((accept|reject|drop|masquerade|log)
             ((not)? from ADDRNAME ((not)? port PORTNAME)?)?
             ((not)? to ADDRNAME ((not)? port PORTNAME)?)?
             ((not)? proto (tcp|udp|icmp|any))?
@@ -45,4 +51,5 @@ Configuration syntax
             (state (new|established|invalid))?
             (limit INTEGER/TIMEUNIT (burst INTEGER)?)?
             (comment "COMMENT")?
-            (prefix "LOG_PREFIX")
+            (prefix "LOG_PREFIX"))
+            | (jump CHAINNAME)
