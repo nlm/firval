@@ -206,8 +206,9 @@ class Firval():
                     ln.append(':{}-{} - [0:0]'.format(ruleset, chain.lower()))
 
             # custom chains
-            for chain in custchains[table]:
-                ln.append(':custom-{} - [0:0]'.format(chain.lower()))
+            if table in custchains:
+                for chain in custchains[table]:
+                    ln.append(':custom-{} - [0:0]'.format(chain.lower()))
 
             # routing rules
             for chain in routing[table]:
@@ -221,9 +222,10 @@ class Firval():
                         ln.append(rule)
 
             # custom chain rules
-            for chain in custchains[table]:
-                for rule in custchains[table][chain]:
-                    ln.append(rule)
+            if table in custchains:
+                for chain in custchains[table]:
+                    for rule in custchains[table][chain]:
+                        ln.append(rule)
 
         ln.append('COMMIT')
         ln.append('# finished {}'.format(datetime.datetime.now()))
