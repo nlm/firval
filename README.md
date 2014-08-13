@@ -9,7 +9,7 @@ How to use
 Craft a yaml configuration file and make it feed it to firval.py,
 it will produce a iptables-restore compatible rule file
 
-if you want, you can event do this:
+if you want, you can even do this:
 
     cat rules.yaml | ./firval.py | iptables-restore
 
