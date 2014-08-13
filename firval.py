@@ -377,8 +377,6 @@ class _Rule():
                 r.extend(['--log-prefix', str(self.log_prefix)])
             else:
                 raise ParseError("log prefix requires 'log' action")
-        elif self.action == 'log':
-            r.extend(['--log-prefix', 'AUTO-PREFIX'])
 
         # Jump to custom chain
         if self.jump_chain is not None:
