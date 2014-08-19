@@ -6,10 +6,10 @@ a netfilter firewall rules generator designed designed to be easy to read, write
 How to use
 ==========
 
-Craft a yaml configuration file and make it feed it to firval.py,
+Write a yaml configuration file and feed it to firval.py,
 it will produce a iptables-restore compatible rule file
 
-if you want, you can even do this:
+it means you can do this:
 
     cat rules.yaml | ./firval.py | iptables-restore
 
@@ -34,7 +34,7 @@ Configuration syntax
     services:
       SERVICENAME:
         proto: tcp | udp | icmp
-        port: PORT-NUMBER (only for tcp or udp)
+        port: PORT-NUMBER(,PORT-NUMBER)* (only for tcp or udp)
         type: ICMP-TYPE (only for icmp)
 
     IFNAME-to-IFNAME:
