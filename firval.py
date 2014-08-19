@@ -243,7 +243,7 @@ class _Rule():
         '(?:(?:\s+(?P<icmp_type_neg>not))?\s+type\s+(?P<icmp_type>\S+))?' + \
         '(?:\s+service\s+(?P<service>\S+))?' + \
         '(?:\s+state\s+(?P<state>new|established|invalid))?' + \
-        '(?:\s+limit\s+(?P<limit>\d+/\S)(?:\s+burst\s+(?P<limit_burst>\S+)))?' + \
+        '(?:\s+limit\s+(?P<limit>\d+/\S)(?:\s+burst\s+(?P<limit_burst>\S+))?)?' + \
         '(?:\s+comment\s+(?P<comment>"[^"]+"))?' + \
         '(?:\s+prefix\s+(?P<log_prefix>"[^"]+"))?' + \
         '\s*$'
