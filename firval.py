@@ -2,12 +2,11 @@
 
 import re
 import datetime
-from voluptuous import Schema,Required,Optional,All,Invalid,Match,In
+from voluptuous import Schema,Required,Optional,Any,All,Invalid,Match,In
 from netaddr import IPNetwork
 
-class ParseError(Exception):
+class ConfigError(Exception):
     pass
-
 
 class Firval():
     _re = {
@@ -70,29 +69,31 @@ class Firval():
             Optional('services'): {
                 All(str, Match(self._re['obj'])): {
                     Required('proto'): All(str, In(self._protos)),
-                    'port': int,
+                    'port': Any(int,
+                        All(str, Match('^[a-z-]+$')),
+                        All(str, Match('^\d+(,\d+)*$'))),
                     'type': All(str, In(self._icmptypes)),
                 }
             },
             Optional('chains'): {
                 All(str, In(self._syschains.keys())): {
                     All(str, Match(self._re['obj'])):
-                        [ All(str, Match(_Rule.pattern)) ]
+                        [ All(str, Match(Rule.pattern)) ]
                 }
             },
             'rulesets': {
                 All(str, Match(self._re['ruleset'])): {
                     'filter': {
                         All(str, In(self._syschains['filter'])):
-                            [ All(str, Match(_Rule.pattern)) ],
+                            [ All(str, Match(Rule.pattern)) ],
                     },
                     'nat': {
                         All(str, In(self._syschains['nat'])):
-                            [ All(str, Match(_Rule.pattern)) ],
+                            [ All(str, Match(Rule.pattern)) ],
                     },
                     'mangle': {
                         All(str, In(self._syschains['mangle'])):
-                            [ All(str, Match(_Rule.pattern)) ],
+                            [ All(str, Match(Rule.pattern)) ],
                     }
                 }
             }
@@ -120,14 +121,14 @@ class Firval():
             else:
                 iif = self._get_iface(izone)
                 if iif is None:
-                    raise ParseError("{} interface is not defined".format(izone))
+                    raise ConfigError("{} interface is not defined".format(izone))
 
             if ozone == 'any':
                 oif = None
             else:
                 oif = self._get_iface(ozone)
                 if oif is None:
-                    raise ParseError("{} interface is not defined".format(ozone))
+                    raise ConfigError("{} interface is not defined".format(ozone))
 
             # Tables ##########################################################
             for table in data['rulesets'][ruleset]:
@@ -174,7 +175,7 @@ class Firval():
                     rules[table][chain][ruleset] = []
 
                     for rule in data['rulesets'][ruleset][table][chain]:
-                        rules[table][chain][ruleset].append('-A {}-{} {}'.format(ruleset, chain.lower(), str(_Rule(rule, aliases=self.data, table=table))))
+                        rules[table][chain][ruleset].append('-A {}-{} {}'.format(ruleset, chain.lower(), str(Rule(rule, aliases=self.data, table=table))))
 
         # Custom Chains Generation ############################################
 
@@ -184,7 +185,7 @@ class Firval():
                 for chain in data['chains'][table]:
                     custchains[table][chain] = []
                     for rule in data['chains'][table][chain]:
-                        custchains[table][chain].append('-A custom-{} {}'.format(chain.lower(), str(_Rule(rule, aliases=self.data, table=table))))
+                        custchains[table][chain].append('-A custom-{} {}'.format(chain.lower(), str(Rule(rule, aliases=self.data, table=table))))
 
         # Rules Output ########################################################
 
@@ -232,7 +233,7 @@ class Firval():
         return "\n".join(ln)
 
 
-class _Rule():
+class Rule():
     pattern = '^\s*(jump\s+(?P<jump_chain>\S+))|' + \
         '(?P<action>accept|reject|drop|masquerade|log)' + \
         '(?:(?:\s+(?P<src_neg>not))?\s+from\s+(?P<src_addr>\S+)' + \
@@ -247,6 +248,9 @@ class _Rule():
         '(?:\s+comment\s+(?P<comment>"[^"]+"))?' + \
         '(?:\s+prefix\s+(?P<log_prefix>"[^"]+"))?' + \
         '\s*$'
+
+    def ParseError(Exception):
+        pass
 
     def __init__(self, text, aliases=None, table=None):
         self._text = text
@@ -264,7 +268,7 @@ class _Rule():
         if result:
             self.data = result.groupdict()
         else:
-            raise ParseError(text)
+            raise self.ParseError(text)
 
     def _is_any(self, value):
         return value is None or value == 'any'
@@ -320,7 +324,7 @@ class _Rule():
         # Source port
         if not self._is_any(self.src_port):
             if self._is_any(self.proto):
-                raise ParseError("protocol must be set when using port in '{}'".format(self._text))
+                raise ConfigError("protocol must be set when using port in '{}'".format(self._text))
             if self.src_port_neg is not None:
                 r.append('!')
             r.extend(['--sport', str(self._get_port(self.src_port))])
@@ -328,7 +332,7 @@ class _Rule():
         # Destination port
         if not self._is_any(self.dst_port):
             if self._is_any(self.proto):
-                raise ParseError("protocol must be set when using port in '{}'".format(self._text))
+                raise ConfigError("protocol must be set when using port in '{}'".format(self._text))
             if self.dst_port_neg is not None:
                 r.append('!')
             r.extend(['--dport', str(self._get_port(self.dst_port))])
@@ -336,7 +340,7 @@ class _Rule():
         # ICMP Type
         if not self._is_any(self.icmp_type):
             if self._is_any(self.proto):
-                raise ParseError("protocol must be set when using icmp type in '{}'".format(self._text))
+                raise ConfigError("protocol must be set when using icmp type in '{}'".format(self._text))
             if self.icmp_type_neg is not None:
                 r.append('!')
             r.extend(['--icmp-type', str(self.icmp_type)])
@@ -344,13 +348,21 @@ class _Rule():
         # Service
         if self.service is not None:
             if not self._is_any(self.dst_port) or not self._is_any(self.proto):
-                raise ParseError('service conflicts with dport or proto:', self.service)
+                raise ConfigError('service conflicts with dport or proto:', self.service)
             service = self._get_service(self.service)
             if service is None:
-                raise ParseError('unknown service: ' + self.service)
+                raise ConfigError('unknown service: ' + self.service)
             r.extend(['-p', service['proto']])
             if service['proto'] in ['tcp', 'udp']:
-                r.extend(['--dport', str(service['port'])])
+                if re.match('^\d+(,\d+)*$', str(service['port'])):
+                    ports = re.split(',', str(service['port']))
+                    if len(ports) > 1:
+                        r.extend(['-m', 'multiport'])
+                        r.extend(['--dports', str(service['port'])])
+                    else:
+                        r.extend(['--dport', str(service['port'])])
+                else:
+                    r.extend(['--dport', str(service['port'])])
 
         # State
         if not self._is_any(self.state):
@@ -376,14 +388,14 @@ class _Rule():
             if self.action == 'log':
                 r.extend(['--log-prefix', str(self.log_prefix)])
             else:
-                raise ParseError("log prefix requires 'log' action")
+                raise ConfigError("log prefix requires 'log' action")
 
         # Jump to custom chain
         if self.jump_chain is not None:
             if self._get_chain(self._table, self.jump_chain):
                 r.extend(['-j', 'custom-{}'.format(self.jump_chain)])
             else:
-                raise ParseError("unknown chain: " + self.jump_chain)
+                raise ConfigError("unknown chain: " + self.jump_chain)
 
         # Comment
         if self.comment is None:
@@ -395,4 +407,16 @@ class _Rule():
 if __name__ == '__main__':
     import sys
     import yaml
-    print str(Firval(yaml.load(sys.stdin)))
+    import voluptuous
+    try:
+        print str(Firval(yaml.load(sys.stdin)))
+    except yaml.parser.ParserError as e:
+        print "# firval: yaml parsing error: " + str(e).replace("\n", "")
+    except voluptuous.MultipleInvalid as e:
+        print "# firval: config structure error: " + str(e).replace("\n", "")
+    except Rule.ParseError as e:
+        print "# firval: rule parsing error: " + str(e).replace("\n", "")
+    except ConfigError as e:
+        print "# firval: config error: " + str(e).replace("\n", "")
+    except Exception as e:
+        print "# firval: error: " + str(e).replace("\n", "")
