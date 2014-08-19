@@ -154,7 +154,7 @@ class Firval():
                     if oif is not None:
                         rule.extend(['-o', oif])
 
-                    rule.extend(['-j', '{}-{}'.format(ruleset, chain).lower()])
+                    rule.extend(['-j', '{}-{}'.format(chain, ruleset).lower()])
                     rule.extend(['-m', 'comment'])
                     rule.extend(['--comment', '"{} {} -> {}"'.format(chain, izone, ozone)])
 
@@ -175,7 +175,7 @@ class Firval():
                     rules[table][chain][ruleset] = []
 
                     for rule in data['rulesets'][ruleset][table][chain]:
-                        rules[table][chain][ruleset].append('-A {}-{} {}'.format(ruleset, chain.lower(), str(Rule(rule, aliases=self.data, table=table))))
+                        rules[table][chain][ruleset].append('-A {}-{} {}'.format(chain.lower(), ruleset.lower(), str(Rule(rule, aliases=self.data, table=table))))
 
         # Custom Chains Generation ############################################
 
@@ -204,7 +204,7 @@ class Firval():
             # custom routing chains
             for chain in rules[table]:
                 for ruleset in rules[table][chain]:
-                    ln.append(':{}-{} - [0:0]'.format(ruleset, chain.lower()))
+                    ln.append(':{}-{} - [0:0]'.format(chain.lower(), ruleset.lower()))
 
             # custom chains
             if table in custchains:
