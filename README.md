@@ -3,6 +3,12 @@ firval
 
 a netfilter firewall rules generator designed to be easy to read, write and maintain
 
+Install
+=======
+
+    git clone https://github.com/nlm/firval
+    pip install ./firval
+
 How to use
 ==========
 
@@ -11,7 +17,7 @@ it will produce a iptables-restore compatible rule file
 
 it means you can do this:
 
-    cat rules.yaml | ./firval.py | iptables-restore
+    cat rules.yaml | firval | iptables-restore
 
 Configuration syntax
 ====================
