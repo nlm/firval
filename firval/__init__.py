@@ -377,12 +377,12 @@ class Rule():
             aliases: address, ports, services and chains dictionnary
             table: chains dictionnary for chain jumping
         """
+        self.comment = None
+        self.data = None
         self._text = text
         self._aliases = aliases if aliases is not None else {}
         self._table = table if table is not None else ''
         self._parse(text)
-        self.comment = None
-        self.data = None
 
     def __getattr__(self, name):
         """
