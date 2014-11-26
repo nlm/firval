@@ -6,7 +6,7 @@ setup(
     packages = find_packages(),
     author = "Nicolas Limage",
     description = "a netfilter firewall rules generator designed designed to be easy to read, write and maintain",
-    license = "GPL",
+    license = "MIT",
     keywords = "netfilter iptables firewall",
     url = "https://github.com/nlm/firval",
     classifiers = [
