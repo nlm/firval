@@ -64,6 +64,7 @@ from voluptuous import Schema, Required, Optional, Any, All, Invalid, Match, In
 from voluptuous import MultipleInvalid
 from netaddr import IPNetwork
 import yaml
+import argparse
 
 class ConfigError(Exception):
     """
@@ -602,7 +603,17 @@ def main():
     command-line version of the lib
     """
     try:
-        print str(Firval(yaml.load(sys.stdin)))
+        desc = 'a netfilter firewall rules generator ' + \
+               'designed to be easy to read, write and maintain'
+        parser = argparse.ArgumentParser(description=desc)
+        parser.add_argument('file', type=str, help='rules file',
+                            nargs='?', default='-')
+        args = parser.parse_args()
+        if args.file == '-':
+            print str(Firval(yaml.load(sys.stdin)))
+        else:
+            with open(args.file, 'r') as fd:
+                print str(Firval(yaml.load(fd)))
     except yaml.parser.ParserError as ex:
         print "# firval: yaml parsing error: " + str(ex).replace("\n", "")
     except MultipleInvalid as ex:
@@ -611,5 +622,7 @@ def main():
         print "# firval: rule parsing error: " + str(ex).replace("\n", "")
     except ConfigError as ex:
         print "# firval: config error: " + str(ex).replace("\n", "")
+    except KeyboardInterrupt as ex:
+        print "# firval: keyboard interrupted"
     except Exception as ex:
         print "# firval: error: " + str(ex).replace("\n", "")
