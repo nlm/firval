@@ -534,7 +534,9 @@ class Rule():
         # ICMP Type
         if not self._is_any(self.icmp_type):
             if self._is_any(self.proto):
-                raise ConfigError("protocol must be set when using icmp type in '{}'".format(self._text))
+                raise ConfigError("protocol must be set when using icmp-type in '{}'".format(self._text))
+            if self.proto != 'icmp':
+                raise ConfigError("protocol must be 'icmp' when using icmp-type in '{}'".format(self._text))
             if self.icmp_type_neg is not None:
                 rule.append('!')
             rule.extend(['--icmp-type', str(self.icmp_type)])
