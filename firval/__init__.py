@@ -89,9 +89,9 @@ class Firval(object):
         'ruleset': '^[a-z0-9_]+-to-[a-z0-9]+$',
     }
 
-    _protos = ['tcp', 'udp', 'icmp']
+    _protos = ('tcp', 'udp', 'icmp')
 
-    _icmptypes = ['echo-reply', 'pong', 'destination-unreachable',
+    _icmptypes = ('echo-reply', 'pong', 'destination-unreachable',
                   'network-unreachable', 'host-unreachable',
                   'protocol-unreachable', 'port-unreachable',
                   'fragmentation-needed', 'source-route-failed',
@@ -107,12 +107,12 @@ class Firval(object):
                   'parameter-problem', 'ip-header-bad',
                   'required-option-missing', 'timestamp-request',
                   'timestamp-reply', 'address-mask-request',
-                  'address-mask-reply']
+                  'address-mask-reply')
 
     _syschains = {
-        'filter': ['input', 'forward', 'output'],
-        'nat': ['prerouting', 'input', 'output', 'postrouting'],
-        'mangle': ['prerouting', 'input', 'forward', 'output', 'postrouting']
+        'filter': ('input', 'forward', 'output'),
+        'nat': ('prerouting', 'input', 'output', 'postrouting'),
+        'mangle': ('prerouting', 'input', 'forward', 'output', 'postrouting')
     }
 
     def __init__(self, obj):
