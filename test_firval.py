@@ -24,6 +24,10 @@ class Rule(unittest.TestCase):
             ('accept not to 1.2.3.4', '! -d 1.2.3.4 -j ACCEPT -m comment --comment "accept not to 1.2.3.4"'),
             ('drop proto icmp type port-unreachable',
              '-p icmp --icmp-type port-unreachable -j DROP -m comment --comment "drop proto icmp type port-unreachable"'),
+            ('accept state established',
+             '-m state --state ESTABLISHED,RELATED -j ACCEPT -m comment --comment "accept state established"'),
+            ('drop proto icmp type an-unknown-icmp-type',
+             '-p icmp --icmp-type an-unknown-icmp-type -j DROP -m comment --comment "drop proto icmp type an-unknown-icmp-type"'),
         )
         self.parseerror = (
             'omg not a rule',
@@ -35,17 +39,19 @@ class Rule(unittest.TestCase):
             'accept service xyz',
             'accept from port port 22',
             'drop proto tcp type port-unreachable',
-            'drop proto icmp type an-unknown-type',
         )
 
     def test_match(self):
         for rule, text in self.checkset:
+            print('>>> ' + rule)
             self.assertEqual(str(firval.Rule(rule)), text)
 
     def test_parseerror(self):
         for rule in self.parseerror:
+            print('>>> ' + rule)
             self.assertRaises(firval.ParseError, firval.Rule, rule)
 
     def test_configerror(self):
         for rule in self.configerror:
+            print('>>> ' + rule)
             self.assertRaises(firval.ConfigError, str, firval.Rule(rule))
