@@ -89,9 +89,9 @@ class Firval(object):
         'ruleset': '^[a-z0-9_]+-to-[a-z0-9]+$',
     }
 
-    _protos = ('tcp', 'udp', 'icmp')
+    protocols = ('tcp', 'udp', 'icmp')
 
-    _icmptypes = ('echo-reply', 'pong', 'destination-unreachable',
+    icmp_types = ('echo-reply', 'pong', 'destination-unreachable',
                   'network-unreachable', 'host-unreachable',
                   'protocol-unreachable', 'port-unreachable',
                   'fragmentation-needed', 'source-route-failed',
@@ -123,7 +123,7 @@ class Firval(object):
             obj: the datastructure representing the rules
         """
         self.chains = []
-        self.data = self._validate(obj)
+        self.data = self.validate(obj)
 
     def _get_iface(self, name):
         """
@@ -153,7 +153,8 @@ class Firval(object):
         """
         return IPNetwork(address)
 
-    def _validate(self, data):
+    @classmethod
+    def validate(cls, data):
         """
         validates the data schema
 
@@ -165,44 +166,44 @@ class Firval(object):
         """
         Schema({
             Required('interfaces'): {
-                All(str, Match(self._re['obj'])):
-                    All(str, Match(self._re['if']))
+                All(str, Match(cls._re['obj'])):
+                    All(str, Match(cls._re['if']))
             },
             Optional('addresses'): {
-                All(str, Match(self._re['obj'])):
-                    All(str, self._valid_addr)
+                All(str, Match(cls._re['obj'])):
+                    All(str, cls._valid_addr)
             },
             Optional('ports'): {
-                All(str, Match(self._re['obj'])):
+                All(str, Match(cls._re['obj'])):
                     All(int)
             },
             Optional('services'): {
-                All(str, Match(self._re['obj'])): {
-                    Required('proto'): All(str, In(self._protos)),
+                All(str, Match(cls._re['obj'])): {
+                    Required('proto'): All(str, In(cls.protocols)),
                     'port': Any(int,
                                 All(str, Match(r'^[a-z-]+$')),
                                 All(str, Match(r'^\d+(,\d+)*$'))),
-                    'type': All(str, In(self._icmptypes)),
+                    'type': All(str, In(cls.icmp_types)),
                 }
             },
             Optional('chains'): {
-                All(str, In(self._syschains.keys())): {
-                    All(str, Match(self._re['obj'])):
+                All(str, In(cls._syschains.keys())): {
+                    All(str, Match(cls._re['obj'])):
                         [All(str, Match(Rule.pattern))]
                 }
             },
             'rulesets': {
-                All(str, Match(self._re['ruleset'])): {
+                All(str, Match(cls._re['ruleset'])): {
                     'filter': {
-                        All(str, In(self._syschains['filter'])):
+                        All(str, In(cls._syschains['filter'])):
                             [All(str, Match(Rule.pattern))],
                     },
                     'nat': {
-                        All(str, In(self._syschains['nat'])):
+                        All(str, In(cls._syschains['nat'])):
                             [All(str, Match(Rule.pattern))],
                     },
                     'mangle': {
-                        All(str, In(self._syschains['mangle'])):
+                        All(str, In(cls._syschains['mangle'])):
                             [All(str, Match(Rule.pattern))],
                     }
                 }
@@ -383,7 +384,7 @@ class Rule():
         self._text = text
         self._aliases = aliases if aliases is not None else {}
         self._table = table if table is not None else ''
-        self._parse(text)
+        self.data = self.parse(text)
 
     def __getattr__(self, name):
         """
@@ -399,20 +400,25 @@ class Rule():
             return self.data[name]
         return None
 
-    def _parse(self, text):
+    @classmethod
+    def parse(cls, text):
         """
-        parse some text and save it to the internal data
+        parse some text and return an attribute dict
 
         parameters:
             text: the rule text in firval language
+
+        returns:
+            an attribute dictionnary
         """
-        result = re.match(self.pattern, text)
+        result = re.match(cls.pattern, text)
         if result:
-            self.data = result.groupdict()
+            return result.groupdict()
         else:
             raise ParseError(text)
 
-    def _is_any(self, value):
+    @staticmethod
+    def _is_any(value):
         """
         check if a value is 'any' or equivalent (None)
 
