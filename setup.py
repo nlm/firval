@@ -2,13 +2,14 @@ from setuptools import setup,find_packages
 
 setup(
     name = "firval",
-    version = "1.1.1",
+    version = "1.2b1",
     packages = find_packages(),
     author = "Nicolas Limage",
     description = "a netfilter firewall rules generator designed designed to be easy to read, write and maintain",
     license = "MIT",
     keywords = "netfilter iptables firewall",
     url = "https://github.com/nlm/firval",
+    test_suite = 'test_firval',
     classifiers = [
         'Development Status :: 5 - Production/Stable',
         'Environment :: Console',
