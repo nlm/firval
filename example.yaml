@@ -1,15 +1,15 @@
 interfaces:
-  mgt: eth0
-  sup: eth1
-  pub: eth2
+  mgt: 'eth0'
+  sup: 'eth1'
+  pub: 'eth2'
 
 addresses:
-  host1: 1.1.1.1
-  host2: 2.2.2.2
-  host3: 3.3.3.3
-  net1: 1.1.1.1/24
-  net2: 2.2.2.2/24
-  net3: 3.3.3.3/24
+  host1: '1.1.1.1'
+  host2: '2.2.2.2'
+  host3: '3.3.3.3'
+  net1: '1.1.1.1/24'
+  net2: '2.2.2.2/24'
+  net3: '3.3.3.3/24'
 
 ports:
   http: 80
@@ -17,41 +17,41 @@ ports:
 
 services:
   http:
-      proto: tcp
+      proto: 'tcp'
       port: 80
   dns-udp:
-      proto: udp
+      proto: 'udp'
       port: 53
   ping:
-      proto: icmp
-      type: echo-request
+      proto: 'icmp'
+      type: 'echo-request'
 
 rulesets:
   any-to-mgt:
     filter:
         output:
-          - accept state established
-          - log
-          - drop
+          - 'accept state established'
+          - 'log'
+          - 'drop'
 
   mgt-to-sup:
     # creates chain mgt-to-sup-forward
     filter:
       forward:
-        - accept to host2 service dns-udp
-        - accept to host1 port http proto tcp
-        - accept from net3 to any port 5556 proto udp
-        - accept from net3 to host3 service http
-        - drop
+        - 'accept to host2 service dns-udp'
+        - 'accept to host1 port http proto tcp'
+        - 'accept from net3 to any port 5556 proto udp'
+        - 'accept from net3 to host3 service http'
+        - 'drop'
 
   any-to-pub:
     # nat: name of the table (filter, nat, mangle)
     nat:
       postrouting:
         # iptables -t nat -A FORWARD -s ... -d 0.0.0.0/0 -o eth2 -j MASQUERADE
-        - masquerade from net2 to any
+        - 'masquerade from net2 to any comment "outgoing nat"'
 
   any-to-any:
-    filter: 
+    filter:
       forward:
-        - drop
+        - 'drop'
