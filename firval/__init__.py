@@ -356,7 +356,7 @@ class Rule():
     object representing an iptables rule
     """
     pattern = r'^\s*(jump\s+(?P<jump_chain>\S+))|' + \
-        r'(?P<action>accept|reject|drop|masquerade|log)' + \
+        r'(?P<action>accept|reject|drop|masquerade|log|nflog)' + \
         r'(?:(?:\s+(?P<src_neg>not))?\s+from\s+(?P<src_addr>\S+)' + \
         r'(?:(?:\s+(?P<src_port_neg>not))?\s+port\s+(?P<src_port>\S+))?)?' + \
         r'(?:(?:\s+(?P<dst_neg>not))?\s+to\s+(?P<dst_addr>\S+)' + \
@@ -589,8 +589,10 @@ class Rule():
         if self.log_prefix is not None:
             if self.action == 'log':
                 rule.extend(['--log-prefix', str(self.log_prefix)])
+            elif self.action == 'nflog':
+                rule.extend(['--nflog-prefix', str(self.log_prefix)])
             else:
-                raise ConfigError("log prefix requires 'log' action")
+                raise ConfigError("log prefix requires 'log' or 'nflog' action")
 
         # Jump to custom chain
         if self.jump_chain is not None:
