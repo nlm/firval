@@ -49,7 +49,7 @@ Configuration syntax
           - RULE
           - ...
 
-    RULE = ((accept|reject|drop|masquerade|log)
+    RULE = ((accept|reject|drop|masquerade|log|nflog)
             ((not)? from ADDRNAME ((not)? port PORTNAME)?)?
             ((not)? to ADDRNAME ((not)? port PORTNAME)?)?
             ((not)? proto (tcp|udp|icmp|any))?
