@@ -293,7 +293,7 @@ class Firval(object):
                     rules[table][chain][ruleset] = []
 
                     for rule in data['rulesets'][ruleset][table][chain]:
-                        rules[table][chain][ruleset].append('-A {0}-{1} {2}'.format(chain.lower(), ruleset.lower(), str(Rule(rule, aliases=self.data, table=table))))
+                        rules[table][chain][ruleset].append('-A {0}-{1} {2}'.format(chain.lower(), ruleset.lower(), str(Rule(rule, aliases=self.data, table=table, izone=izone, ozone=ozone, iif=iif, oif=oif, rtype=chain))))
 
         # Custom Chains Generation ############################################
 
@@ -370,7 +370,7 @@ class Rule():
         r'(?:\s+prefix\s+(?P<log_prefix>"[^"]*"))?' + \
         r'\s*$'
 
-    def __init__(self, text, aliases=None, table=None):
+    def __init__(self, text, aliases=None, table=None, izone=None, ozone=None, iif=None, oif=None, rtype=None):
         """
         initializes the Rule object
 
@@ -384,6 +384,11 @@ class Rule():
         self._text = text
         self._aliases = aliases if aliases is not None else {}
         self._table = table if table is not None else ''
+        self.rtype = rtype if rtype is not None else ''
+        self.izone = izone if izone is not None else ''
+        self.ozone = ozone if izone is not None else ''
+        self.iif = iif
+        self.oif = oif
         self.data = self.parse(text)
 
     def __getattr__(self, name):
@@ -593,6 +598,9 @@ class Rule():
                 rule.extend(['--nflog-prefix', str(self.log_prefix)])
             else:
                 raise ConfigError("log prefix requires 'log' or 'nflog' action")
+        else:
+            if self.action == 'log' or self.action == 'nflog':
+                rule.extend(['--{0}-prefix'.format(self.action), '"firval: ACTION={action} TYPE={type} INZONE={izone} OUTZONE={ozone} "'.format(action=self.action.upper(), type=self.rtype.upper(), izone=self.izone, ozone=self.ozone)])
 
         # Jump to custom chain
         if self.jump_chain is not None:
