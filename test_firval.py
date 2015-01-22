@@ -7,6 +7,7 @@ class Rule(unittest.TestCase):
         self.checkset = (
             ('accept', '-j ACCEPT -m comment --comment "accept"'),
             ('reject', '-j REJECT -m comment --comment "reject"'),
+            ('log prefix ""', '-j LOG --log-prefix "" -m comment --comment "log prefix \\"\\""'),
             ('log prefix "te st"',
              '-j LOG --log-prefix "te st" -m comment --comment "log prefix \\"te st\\""'),
             ('nflog prefix "te st"',

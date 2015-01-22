@@ -53,5 +53,7 @@ rulesets:
 
   any-to-any:
     filter:
+      input:
+        - 'log prefix ""'
       forward:
         - 'drop'

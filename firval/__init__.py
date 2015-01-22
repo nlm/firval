@@ -367,7 +367,7 @@ class Rule():
         r'(?:\s+state\s+(?P<state>new|established|invalid))?' + \
         r'(?:\s+limit\s+(?P<limit>\d+/\S)(?:\s+burst\s+(?P<limit_burst>\S+))?)?' + \
         r'(?:\s+comment\s+(?P<comment>"[^"]+"))?' + \
-        r'(?:\s+prefix\s+(?P<log_prefix>"[^"]+"))?' + \
+        r'(?:\s+prefix\s+(?P<log_prefix>"[^"]*"))?' + \
         r'\s*$'
 
     def __init__(self, text, aliases=None, table=None):
