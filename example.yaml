@@ -42,6 +42,7 @@ rulesets:
         - 'accept to host1 port http proto tcp'
         - 'accept from net3 to any port 5556 proto udp'
         - 'accept from net3 to host3 service http'
+        - 'log'
         - 'drop'
 
   any-to-pub:
@@ -56,4 +57,5 @@ rulesets:
       input:
         - 'log prefix ""'
       forward:
+        - 'log'
         - 'drop'
