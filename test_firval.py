@@ -12,7 +12,6 @@ class Rule(unittest.TestCase):
              '-j LOG --log-prefix "te st" -m comment --comment "log prefix \\"te st\\""'),
             ('nflog prefix "te st"',
              '-j NFLOG --nflog-prefix "te st" -m comment --comment "nflog prefix \\"te st\\""'),
-            ('log', '-j LOG --log-prefix "firval: ACTION=LOG TYPE= INZONE= OUTZONE= " -m comment --comment "log"'),
             ('drop', '-j DROP -m comment --comment "drop"'),
             ('accept from any to any', '-j ACCEPT -m comment --comment "accept from any to any"'),
             ('accept proto tcp', '-p tcp -j ACCEPT -m comment --comment "accept proto tcp"'),
