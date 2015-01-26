@@ -355,9 +355,10 @@ class Rule():
     """
     object representing an iptables rule
     """
-    pattern = r'^\s*(jump\s+(?P<jump_chain>\S+))|' + \
-        r'^\s*(?P<shortcut>clampmss)|' + \
-        r'^\s*(?P<action>accept|reject|drop|masquerade|log|nflog)' + \
+    pattern = r'^\s*(' + \
+        r'(jump\s+(?P<jump_chain>\S+))|' + \
+        r'(?P<shortcut>clampmss)|' + \
+        r'(?P<action>accept|reject|drop|masquerade|log|nflog)' + \
         r'(?:(?:\s+(?P<src_neg>not))?\s+from\s+(?P<src_addr>\S+)' + \
         r'(?:(?:\s+(?P<src_port_neg>not))?\s+port\s+(?P<src_port>\S+))?)?' + \
         r'(?:(?:\s+(?P<dst_neg>not))?\s+to\s+(?P<dst_addr>\S+)' + \
@@ -369,7 +370,7 @@ class Rule():
         r'(?:\s+limit\s+(?P<limit>\d+/\S)(?:\s+burst\s+(?P<limit_burst>\S+))?)?' + \
         r'(?:\s+comment\s+(?P<comment>"[^"]+"))?' + \
         r'(?:\s+prefix\s+(?P<log_prefix>"[^"]*"))?' + \
-        r'\s*$'
+        r')\s*$'
 
     def __init__(self, text, aliases=None, table=None):
         """
