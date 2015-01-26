@@ -7,6 +7,7 @@ class Rule(unittest.TestCase):
         self.checkset = (
             ('accept', '-j ACCEPT -m comment --comment "accept"'),
             ('reject', '-j REJECT -m comment --comment "reject"'),
+            ('clampmss', '-p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu -m comment --comment "clampmss"'),
             ('log prefix ""', '-j LOG --log-prefix "" -m comment --comment "log prefix \\"\\""'),
             ('log prefix "te st"',
              '-j LOG --log-prefix "te st" -m comment --comment "log prefix \\"te st\\""'),
@@ -39,6 +40,7 @@ class Rule(unittest.TestCase):
             'accept proto tcp port 22',
             'accept from',
             'accept from any port',
+            'clampmss from port 22',
         )
         self.configerror = (
             'accept service xyz',
@@ -54,9 +56,17 @@ class Rule(unittest.TestCase):
     def test_parseerror(self):
         for rule in self.parseerror:
             print('>>> ' + rule)
+            try:
+                print(firval.Rule(rule))
+            except:
+                pass
             self.assertRaises(firval.ParseError, firval.Rule, rule)
 
     def test_configerror(self):
         for rule in self.configerror:
             print('>>> ' + rule)
+            try:
+                print(firval.Rule(rule))
+            except:
+                pass
             self.assertRaises(firval.ConfigError, str, firval.Rule(rule))
