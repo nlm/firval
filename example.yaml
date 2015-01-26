@@ -38,6 +38,7 @@ rulesets:
     # creates chain mgt-to-sup-forward
     filter:
       forward:
+        - 'clampmss'
         - 'accept to host2 service dns-udp'
         - 'accept to host1 port http proto tcp'
         - 'accept from net3 to any port 5556 proto udp'

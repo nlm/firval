@@ -356,7 +356,8 @@ class Rule():
     object representing an iptables rule
     """
     pattern = r'^\s*(jump\s+(?P<jump_chain>\S+))|' + \
-        r'(?P<action>accept|reject|drop|masquerade|log|nflog)' + \
+        r'^\s*(?P<shortcut>clampmss)|' + \
+        r'^\s*(?P<action>accept|reject|drop|masquerade|log|nflog)' + \
         r'(?:(?:\s+(?P<src_neg>not))?\s+from\s+(?P<src_addr>\S+)' + \
         r'(?:(?:\s+(?P<src_port_neg>not))?\s+port\s+(?P<src_port>\S+))?)?' + \
         r'(?:(?:\s+(?P<dst_neg>not))?\s+to\s+(?P<dst_addr>\S+)' + \
@@ -600,6 +601,11 @@ class Rule():
                 rule.extend(['-j', 'custom-{0}'.format(self.jump_chain)])
             else:
                 raise ConfigError("unknown chain: " + self.jump_chain)
+
+        # Shortcuts
+        if self.shortcut is not None:
+            rule.extend(['-p', 'tcp', '--tcp-flags', 'SYN,RST', 'SYN'])
+            rule.extend(['-j', 'TCPMSS', '--clamp-mss-to-pmtu'])
 
         # Comment
         if self.comment is None:
