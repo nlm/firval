@@ -357,7 +357,8 @@ class Rule():
     """
     pattern = r'^\s*(' + \
         r'(jump\s+(?P<jump_chain>\S+))|' + \
-        r'(?P<shortcut>clampmss)|' + \
+        r'(?P<clampmss>clampmss)|' + \
+        r'(?P<setmss>setmss\s+(?P<max_mss>\d+))|' + \
         r'(?P<action>accept|reject|drop|masquerade|log|nflog)' + \
         r'(?:(?:\s+(?P<src_neg>not))?\s+from\s+(?P<src_addr>\S+)' + \
         r'(?:(?:\s+(?P<src_port_neg>not))?\s+port\s+(?P<src_port>\S+))?)?' + \
@@ -603,10 +604,14 @@ class Rule():
             else:
                 raise ConfigError("unknown chain: " + self.jump_chain)
 
-        # Shortcuts
-        if self.shortcut is not None:
+        # Special Cases
+        if self.clampmss is not None:
             rule.extend(['-p', 'tcp', '--tcp-flags', 'SYN,RST', 'SYN'])
             rule.extend(['-j', 'TCPMSS', '--clamp-mss-to-pmtu'])
+        elif self.setmss is not None:
+            rule.extend(['-p', 'tcp', '--tcp-flags', 'SYN,RST', 'SYN'])
+            rule.extend(['-j', 'TCPMSS'])
+            rule.extend(['--set-mss', '{0}'.format(self.max_mss)])
 
         # Comment
         if self.comment is None:

@@ -31,6 +31,7 @@ rulesets:
     filter:
         output:
           - 'accept state established'
+          - 'setmss 900'
           - 'log'
           - 'drop'
 
