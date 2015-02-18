@@ -39,11 +39,12 @@ Configuration syntax
         port: PORT-NUMBER(,PORT-NUMBER)* (only for tcp or udp)
         type: ICMP-TYPE (only for icmp)
 
-    IFNAME-to-IFNAME:
-      filter|nat|mangle:
-        input|forward|output|...: (availability depends if in 'filter', 'nat' or 'mangle')
-          - RULE
-          - ...
+    rulesets:
+      IFNAME-to-IFNAME:
+        filter|nat|mangle:
+          input|forward|output|...: (availability depends if in 'filter', 'nat' or 'mangle')
+            - RULE
+            - ...
 
     RULE = ((accept|reject|drop|masquerade|log|nflog)
             ((not)? from ADDRNAME ((not)? port PORTNAME)?)?
