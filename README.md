@@ -1,7 +1,7 @@
 firval
 ======
 
-a netfilter firewall rules generator designed to be easy to read, write and maintain
+a netfilter firewall rules generator designed to be easier to read, write and maintain
 
 Install
 =======
