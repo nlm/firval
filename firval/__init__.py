@@ -84,10 +84,10 @@ class Firval(object):
     The main Firval class
     """
     _re = {
-        'obj': '^[a-zA-Z0-9-_]{1,32}$',
+        'obj': '^[a-zA-Z0-9-_]{1,128}$',
         'zone': '^[a-z0-9]+$',
         'if': '^[a-z0-9:.]+$',
-        'ruleset': '^[a-z0-9_]+-to-[a-z0-9]+$',
+        'ruleset': '^[a-z0-9_]+-to-[a-z0-9_]+$',
     }
 
     protocols = ('tcp', 'udp', 'icmp')
