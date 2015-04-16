@@ -182,8 +182,8 @@ class Firval(object):
                 All(str, Match(cls._re['obj'])): {
                     Required('proto'): All(str, In(cls.protocols)),
                     'port': Any(int,
-                                All(str, Match(r'^[a-z-]+$')),
-                                All(str, Match(r'^\d+(,\d+)*$'))),
+                                Match(r'^[a-z-]+$'),
+                                Match(r'^\d+(,\d+)*$')),
                     'type': All(str, In(cls.icmp_types)),
                 }
             },
