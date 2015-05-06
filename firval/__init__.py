@@ -588,6 +588,8 @@ class Rule():
         # Actions
         if self.action is not None:
             rule.extend(['-j', str(self.action.upper())])
+        if self.action == 'reject':
+            rule.extend(['--reject-with', 'icmp-host-prohibited'])
 
         # Prefix
         if self.log_prefix is not None:
