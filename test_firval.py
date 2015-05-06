@@ -5,8 +5,10 @@ class Rule(unittest.TestCase):
 
     def setUp(self):
         self.checkset = (
-            ('accept', '-j ACCEPT -m comment --comment "accept"'),
-            ('reject', '-j REJECT -m comment --comment "reject"'),
+            ('accept','-j ACCEPT -m comment --comment "accept"'),
+            ('drop', '-j DROP -m comment --comment "drop"'),
+            ('masquerade', '-j MASQUERADE -m comment --comment "masquerade"'),
+            ('reject', '-j REJECT --reject-with icmp-host-prohibited -m comment --comment "reject"'),
             ('clampmss', '-p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu -m comment --comment "clampmss"'),
             ('log prefix ""', '-j LOG --log-prefix "" -m comment --comment "log prefix \\"\\""'),
             ('log prefix "te st"',
@@ -34,6 +36,9 @@ class Rule(unittest.TestCase):
              '-m state --state ESTABLISHED,RELATED -j ACCEPT -m comment --comment "accept state established"'),
             ('drop proto icmp type an-unknown-icmp-type',
              '-p icmp --icmp-type an-unknown-icmp-type -j DROP -m comment --comment "drop proto icmp type an-unknown-icmp-type"'),
+            ('accept limit 1/s burst 5',
+             '-m limit --limit 1/s --limit-burst 5 -j ACCEPT -m comment --comment "accept limit 1/s burst 5"'),
+            ('drop state invalid', '-m state --state INVALID -j DROP -m comment --comment "drop state invalid"'),
         )
         self.parseerror = (
             'omg not a rule',
@@ -41,6 +46,7 @@ class Rule(unittest.TestCase):
             'accept from',
             'accept from any port',
             'clampmss from port 22',
+            'accept limit 1/sec burst 5',
         )
         self.configerror = (
             'accept service xyz',
