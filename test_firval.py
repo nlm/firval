@@ -1,5 +1,16 @@
 import unittest
-import firval
+from firval.core import Firval
+from firval.rule import Rule
+
+class Firval(unittest.TestCase):
+
+    def setUp(self):
+        pass
+
+    def test_getchainname(self):
+        chainname = Firval._get_chainname('ok', 'bla', 'bli')
+        self.assertEqual(chainname, 'ok-from-bla-to-bli')
+
 
 class Rule(unittest.TestCase):
 

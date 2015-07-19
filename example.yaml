@@ -1,7 +1,15 @@
-interfaces:
-  mgt: 'eth0'
-  sup: 'eth1'
-  pub: 'eth2'
+
+#ports:
+#  http: 80
+#  https: 443
+
+parameters:
+  accept_ping: true
+  accept_established: true
+  clamp_mss: true
+  reject_with: 'icmp-host-prohibited'
+  auto_lo: true
+  log: 'nflog'
 
 addresses:
   host1: '1.1.1.1'
@@ -11,53 +19,47 @@ addresses:
   net2: '2.2.2.2/24'
   net3: '3.3.3.3/24'
 
-ports:
-  http: 80
-  https: 443
+zones:
+  mgt:
+    # optional: list or scalar = antispoof
+    # not recommended for public interfaces
+    - eth0: '192.168.2.0/24'
+  sup:
+    - eth1
+  pub:
+    - eth2
+    - eth3
 
 services:
   http:
       proto: 'tcp'
       port: 80
-  dns-udp:
+  dns_udp:
       proto: 'udp'
       port: 53
   ping:
       proto: 'icmp'
       type: 'echo-request'
 
-rulesets:
-  any-to-mgt:
-    filter:
-        output:
-          - 'accept state established'
-          - 'setmss 900'
-          - 'log'
-          - 'drop'
-
-  mgt-to-sup:
-    # creates chain mgt-to-sup-forward
-    filter:
-      forward:
-        - 'clampmss'
-        - 'accept to host2 service dns-udp'
-        - 'accept to host1 port http proto tcp'
-        - 'accept from net3 to any port 5556 proto udp'
-        - 'accept from net3 to host3 service http'
-        - 'log'
-        - 'drop'
-
-  any-to-pub:
-    # nat: name of the table (filter, nat, mangle)
-    nat:
-      postrouting:
-        # iptables -t nat -A FORWARD -s ... -d 0.0.0.0/0 -o eth2 -j MASQUERADE
-        - 'masquerade from net2 to any comment "outgoing nat"'
-
-  any-to-any:
-    filter:
-      input:
-        - 'log prefix ""'
-      forward:
-        - 'log'
-        - 'drop'
+rules:
+  # syntax is table_chain
+  # if table is omitted: filter
+  filter input:
+    from mgt:
+      # accept state established (free)
+      - 'accept service ssh'
+      #- 'reject log (prefix=XXX)'
+  filter forward:
+    # creates chain forward-mgt-to-sup
+    from mgt to sup:
+      # accept state established
+      # clampmss
+      - 'accept'
+    default:
+      # accept state established
+      # clampmss
+      - 'reject'
+      #- 'log, reject'
+  nat postrouting:
+    to pub:
+      - 'masquerade from net2'
