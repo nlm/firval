@@ -173,6 +173,67 @@ class Firval(object):
                                   '-from-{0}'.format(fromzone) if fromzone is not None else '',
                                   '-to-{0}'.format(tozone) if tozone is not None else '')
 
+    def generate_rulesdata(self, data, env):
+
+        rules = {}
+        routing = {}
+        custchains = {}
+
+        # Table (ex: filter) and basechain (ex: input) ########################
+        for table_chain in data:
+
+            print(table_chain)
+            table, basechain = re.split('\s+', table_chain)
+
+            # initialize routing table
+            if table not in routing:
+                routing[table] = {}
+            if basechain not in routing[table]:
+                routing[table][basechain] = []
+
+            # initialize rules table
+            if table not in rules:
+                rules[table] = {}
+            if basechain not in rules[table]:
+                rules[table][basechain] = []
+
+            print('# {} {}'.format(table, basechain))
+
+            # From and To informations ########################################
+            for from_to in data[table_chain]:
+
+                fromto_infos = re.match(self.re['fromto'], from_to).groupdict()
+                izone = fromto_infos.get('from')
+                ozone = fromto_infos.get('to')
+                iifs = self._get_interfaces(izone)
+                oifs = self._get_interfaces(ozone)
+                chain = self._get_chainname(basechain, izone, ozone)
+
+                # generate routing rule
+                for iif in iifs or [None]:
+                    for oif in oifs or [None]:
+                        rule = [ '-A', basechain.upper() ]
+                        if iif is not None:
+                            rule.extend(['-i', iif])
+                        if oif is not None:
+                            rule.extend(['-o', oif])
+
+                    rule.extend(['-j', '{0}'.format(chain).lower()])
+                    rule.extend(['-m', 'comment'])
+                    rule.extend(['--comment',
+                                 '"{0} {1}"'.format(basechain, from_to)])
+
+                    routing[table][basechain].append(' '.join(rule))
+
+                # add rules
+                for rule in data[table_chain][from_to]:
+                    print('RULE: ' + rule)
+                    pass
+                    #rules[table_chain][from_to].extend(Rule(rule).get_iptrules())
+
+        return (routing, rules)
+
+
     def __str__(self):
         """
         prints the rules represented by this object
@@ -185,28 +246,9 @@ class Firval(object):
         if 'rules' not in data:
             return ""
 
-        rules = {}
-        routing = {}
-        custchains = {}
-
-        # Rule Types
-        for table_chain in data['rules']:
-            print(table_chain)
-            table, basechain = re.split('\s+', table_chain)
-            if table not in rules:
-                rules[table] = {}
-            if table not in routing:
-                routing[table] = {}
-            print('# {} {}'.format(table, basechain))
-            for from_to in data['rules'][table_chain]:
-                fromto_infos = re.match(self.re['fromto'], from_to).groupdict()
-                izone = fromto_infos.get('from')
-                ozone = fromto_infos.get('to')
-                iifs = self._get_interfaces(izone)
-                oifs = self._get_interfaces(ozone)
-                chain = self._get_chainname(basechain, izone, ozone)
-
-                print(chain)
+        iptdata = self.generate_rulesdata(data['rules'], {})
+        from pprint import pprint
+        pprint(iptdata)
 
         return "END"
 
