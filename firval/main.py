@@ -30,5 +30,5 @@ def main():
         print("# firval: config error: " + str(ex).replace("\n", ""))
     except KeyboardInterrupt as ex:
         print("# firval: keyboard interrupt")
-    except Exception as ex:
-        print("# firval: error: " + str(ex).replace("\n", ""))
+#    except Exception as ex:
+#        print("# firval: error: " + str(ex).replace("\n", ""))
