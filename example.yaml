@@ -55,6 +55,10 @@ rules:
       # accept state established
       # clampmss
       - 'accept'
+    from mgt to pub:
+      - 'accept'
+    from pub to mgt:
+      - 'accept state established'
     default:
       # accept state established
       # clampmss
