@@ -22,20 +22,20 @@ class Rule():
         r'(?:\s+prefix\s+(?P<log_prefix>"[^"]*"))?' + \
         r')\s*$'
 
-    def __init__(self, text, aliases=None, table=None):
+    def __init__(self, text, env):
         """
         initializes the Rule object
 
         parameters:
             text: the rule written with firval simplified syntax
-            aliases: address, ports, services and chains dictionnary
-            table: chains dictionnary for chain jumping
+            env: address, ports, services and chains dictionnary
         """
         self.comment = None
         self.data = None
         self._text = text
-        self._aliases = aliases if aliases is not None else {}
-        self._table = table if table is not None else ''
+        self._env = env
+        #self._aliases = aliases if aliases is not None else {}
+        #self._table = table if table is not None else ''
         self.data = self.parse(text)
 
     def __getattr__(self, name):
@@ -93,7 +93,7 @@ class Rule():
             the address associated with the name
         """
         try:
-            return self._aliases['addresses'][name]
+            return self._env['addresses'][name]
         except KeyError:
             return name
 
@@ -108,7 +108,7 @@ class Rule():
             the port associated with the name
         """
         try:
-            return self._aliases['ports'][name]
+            return self._env['ports'][name]
         except KeyError:
             return name
 
@@ -123,7 +123,7 @@ class Rule():
             the service associated with the name
         """
         try:
-            return self._aliases['services'][name]
+            return self._env['services'][name]
         except KeyError:
             return None
 
