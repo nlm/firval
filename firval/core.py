@@ -146,17 +146,18 @@ class Firval(object):
             }
         })(data)
 
+        # Check constraints like 'input chains don't have output interface'
         #todo: rename vars
-        for tablechain in data['rules'].keys():
-            chaindir = re.split('\s+', tablechain)[1]
-            for rulezones in data['rules'][tablechain]:
-                dirinfos = re.match(cls.re['fromto'], rulezones).groupdict()
+        for table_chain in data['rules'].keys():
+            basechain = re.split('\s+', table_chain)[1]
+            for from_to in data['rules'][table_chain]:
+                dirinfos = re.match(cls.re['fromto'], from_to).groupdict()
                 for elt in ('from', 'to'):
-                    if dirinfos.get(elt) and chaindir not in cls._chainsdir[elt]:
-                        raise ConfigError('"{0} / {1}": cannot use "{2}" in chain type "{3}"'.format(tablechain,
-                                                                                                     rulezones,
-                                                                                                     elt,
-                                                                                                     chaindir))
+                    if dirinfos.get(elt) and basechain not in cls._chainsdir[elt]:
+                        raise ConfigError('"{0}[{1}]": cannot use "{2}" in chain type "{3}"'.format(basechain,
+                                                                                                    from_to,
+                                                                                                    elt,
+                                                                                                    basechain))
         print('# schema validation ok')
         return data
 
@@ -169,9 +170,27 @@ class Firval(object):
 
     @staticmethod
     def _get_chainname(basechain, fromzone, tozone):
+        if fromzone is None and tozone is None:
+            return '{0}{1}'.format(basechain, '-default')
         return '{0}{1}{2}'.format(basechain,
                                   '-from-{0}'.format(fromzone) if fromzone is not None else '',
                                   '-to-{0}'.format(tozone) if tozone is not None else '')
+
+    @staticmethod
+    def _generate_routingrule(iif, oif, basechain, chain, from_to):
+        rule = [ '-A', basechain.upper() ]
+        if iif is not None:
+            rule.extend(['-i', iif])
+        if oif is not None:
+            rule.extend(['-o', oif])
+
+        rule.extend(['-j', '{0}'.format(chain).lower()])
+        rule.extend(['-m', 'comment'])
+        rule.extend(['--comment',
+                     '"{0} {1}"'.format(basechain.lower(),
+                                        from_to.lower())])
+
+        return ' '.join(rule)
 
     def generate_rulesdata(self, data, env):
 
@@ -194,14 +213,13 @@ class Firval(object):
             # initialize rules table
             if table not in rules:
                 rules[table] = {}
-            if basechain not in rules[table]:
-                rules[table][basechain] = []
 
             print('# {} {}'.format(table, basechain))
 
             # From and To informations ########################################
             for from_to in data[table_chain]:
 
+                # get info needed for generation
                 fromto_infos = re.match(self.re['fromto'], from_to).groupdict()
                 izone = fromto_infos.get('from')
                 ozone = fromto_infos.get('to')
@@ -209,29 +227,42 @@ class Firval(object):
                 oifs = self._get_interfaces(ozone)
                 chain = self._get_chainname(basechain, izone, ozone)
 
-                # generate routing rule
+                # generate routing rules
                 for iif in iifs or [None]:
                     for oif in oifs or [None]:
-                        rule = [ '-A', basechain.upper() ]
-                        if iif is not None:
-                            rule.extend(['-i', iif])
-                        if oif is not None:
-                            rule.extend(['-o', oif])
 
-                    rule.extend(['-j', '{0}'.format(chain).lower()])
-                    rule.extend(['-m', 'comment'])
-                    rule.extend(['--comment',
-                                 '"{0} {1}"'.format(basechain, from_to)])
+                        # Generate routing rule text
+                        rulestr = self._generate_routingrule(iif, oif,
+                                                             basechain,
+                                                             chain, from_to)
 
-                    routing[table][basechain].append(' '.join(rule))
+                        # Inserting Rule, most precise first, default comes last
+                        if iif is None and oif is None:
+                            routing[table][basechain].append(rulestr)
+                        elif iif is None or oif is None:
+                            routing[table][basechain].insert(
+                                len(routing[table][basechain]) - 1, rulestr)
+                        else:
+                            routing[table][basechain].insert(0, rulestr)
 
-                # add rules
+                # Create rulechain in the rules table
+                if chain not in rules[table]:
+                    rules[table][chain] = []
+
+                # Add rules to the rulechain
                 for rule in data[table_chain][from_to]:
-                    print('RULE: ' + rule)
+                    #iptrules = ['-A {0} {1}'.format(chain, iptrule) for iptrule in Rule(rule).get_iptrules()]
+                    #rules[table][chain].extend(iptrules)
                     pass
-                    #rules[table_chain][from_to].extend(Rule(rule).get_iptrules())
 
-        return (routing, rules)
+        # Add rules for lo-to-lo if asked
+        if 'input-from-lo' not in rules['filter']:
+            rulestr = self._generate_routingrule('lo', None, 'input',
+                                                 'input-from-lo',
+                                                 'from lo')
+            routing['filter']['input'].insert(0, rulestr)
+
+        return { 'routing': routing, 'rules': rules }
 
 
     def __str__(self):
