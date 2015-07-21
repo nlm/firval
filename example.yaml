@@ -4,11 +4,11 @@
 #  https: 443
 
 parameters:
-  accept_ping: true
-  accept_established: true
-  clamp_mss: true
+  auto_accept_ping: true
+  auto_accept_established: true
+  auto_accept_lo: true
+  auto_clamp_mss: true
   reject_with: 'icmp-host-prohibited'
-  auto_lo: true
   log: 'nflog'
 
 addresses:
@@ -34,12 +34,16 @@ services:
   http:
       proto: 'tcp'
       port: 80
-  dns_udp:
+  dns:
       proto: 'udp'
       port: 53
   ping:
       proto: 'icmp'
       type: 'echo-request'
+
+chains:
+  test1:
+    - 'accept from net1 to service http'
 
 rules:
   # syntax is table_chain
@@ -49,6 +53,8 @@ rules:
       # accept state established (free)
       - 'accept service ssh'
       #- 'reject log (prefix=XXX)'
+    to mgt:
+      - 'accept'
   filter forward:
     # creates chain forward-mgt-to-sup
     from mgt to sup:
