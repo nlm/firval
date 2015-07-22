@@ -1,7 +1,7 @@
 import re
 import voluptuous
 
-from .exception import ConfigError
+from .exception import ConfigError, ParseError
 
 class Rule():
     """
