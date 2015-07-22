@@ -42,6 +42,10 @@ class Firval(object):
                   'timestamp-reply', 'address-mask-request',
                   'address-mask-reply')
 
+    icmp_reject_types = ('icmp-net-unreachable', 'icmp-host-unreachable',
+                         'icmp-port-unreachable', 'icmp-proto-unreachable',
+                         'icmp-net-prohibited', 'icmp-host-prohibited')
+
     _syschains = {
         'filter': ('input', 'forward', 'output'),
         'nat': ('prerouting', 'input', 'output', 'postrouting'),
@@ -55,6 +59,15 @@ class Firval(object):
 
     _logprefix = 'firval: ACT={action} IZ={in_zone} OZ={out_zone}'
 
+    # XXX: review defaults
+    _default_parameters = {
+        'auto_accept_ping': False,
+        'auto_accept_established': False,
+        'auto_accept_lo': True,
+        'auto_clamp_mss': True,
+        'reject_with': 'icmp-host-prohibited',
+        'log': 'nflog',
+    }
 
     def __init__(self, obj):
         """
@@ -65,6 +78,11 @@ class Firval(object):
         """
         self.chains = []
         self.data = self.validate(obj)
+
+        # Add default to parameters
+        parameters = dict(self._default_parameters)
+        parameters.update(self.data.get('parameters', {}))
+        self.data['parameters'] = parameters
 
 
     @classmethod
@@ -112,7 +130,12 @@ class Firval(object):
         """
         Schema({
             Optional('parameters'): {
-                All(str, Match(cls.re['parameter'])): Any(str, [str], bool, int)
+                'auto_accept_ping': bool,
+                'auto_accept_established': bool,
+                'auto_accept_lo': bool,
+                'auto_clamp_mss': bool,
+                'reject_with': All(str, In(cls.icmp_reject_types)),
+                'log': All(str, In(['syslog', 'nflog']))
             },
             Optional('zones'): {
                 All(str, Match(cls.re['object'])): [
@@ -333,11 +356,11 @@ class Firval(object):
                 # XXX: add conditions
                 head_rules = []
                 tail_rules = []
-                if True:
+                if env['parameters'].get('auto_accept_established'):
                     head_rules.append('accept state established')
-                if True:
+                if env['parameters'].get('auto_accept_ping'):
                     head_rules.append('accept proto icmp type echo-request')
-                if basechain in ['output', 'forward'] and True:
+                if basechain in ['output', 'forward'] and env['parameters'].get('auto_clamp_mss'):
                     head_rules.append('clampmss')
 
                 # Add rules to the rulechain
@@ -349,13 +372,10 @@ class Firval(object):
         # XXX add condition
         if 'input-from-lo' not in rules['filter']:
             # Add routing rule
-            rulestr = self._generate_routingrule('lo', 'lo',
-                                                 None, None,
-                                                 'input',
-                                                 'input-from-lo')
-            routing['filter']['input'].insert(0, rulestr)
-            # Add rule
             chain = self._build_chainname('input', 'lo', None)
+            rulestr = self._generate_routingrule('lo', 'lo', None, None,
+                                                 'input', chain)
+            routing['filter']['input'].insert(0, rulestr)
             rules['filter']['input-from-lo'] = ['-A {0} {1}'.format(chain, iptrule) for iptrule in Rule('accept', env).get_iptrules()]
 
         return { 'routing': routing, 'rules': rules }
@@ -434,6 +454,7 @@ class Firval(object):
             'addresses': self.data.get('addresses', {}),
             'ports': self.data.get('ports', {}),
             'services': self.data.get('services', {}),
+            'parameters': self.data.get('parameters', {}),
         }
 
         #for interface in self._get_interfaces('mgt'):
