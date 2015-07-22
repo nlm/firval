@@ -1,4 +1,7 @@
+import re
 import voluptuous
+
+from .exception import ConfigError
 
 class Rule():
     """
@@ -32,8 +35,8 @@ class Rule():
         """
         self.comment = None
         self.data = None
-        self._text = text
-        self._env = env
+        self.text = text
+        self.env = env
         #self._aliases = aliases if aliases is not None else {}
         #self._table = table if table is not None else ''
         self.data = self.parse(text)
@@ -93,7 +96,7 @@ class Rule():
             the address associated with the name
         """
         try:
-            return self._env['addresses'][name]
+            return self.env['addresses'][name]
         except KeyError:
             return name
 
@@ -108,7 +111,7 @@ class Rule():
             the port associated with the name
         """
         try:
-            return self._env['ports'][name]
+            return self.env['ports'][name]
         except KeyError:
             return name
 
@@ -123,35 +126,36 @@ class Rule():
             the service associated with the name
         """
         try:
-            return self._env['services'][name]
+            return self.env['services'][name]
         except KeyError:
             return None
 
-    def _get_chain(self, table, name):
-        """
-        get a chain from the chains table
+#    def _get_chain(self, table, name):
+#        """
+#        get a chain from the chains table
+#
+#        parameters:
+#            table: the table in which the chain is
+#            name: the name associated with the chain
+#
+#        returns:
+#            the chain associated with the name
+#        """
+#        try:
+#            return self._aliases['chains'][table][name]
+#        except KeyError:
+#            return None
 
-        parameters:
-            table: the table in which the chain is
-            name: the name associated with the chain
-
-        returns:
-            the chain associated with the name
-        """
-        try:
-            return self._aliases['chains'][table][name]
-        except KeyError:
-            return None
 
     def __repr__(self):
-        return self.__class__.__name__ + '(' + self._text + ')'
+        return self.__class__.__name__ + '(' + self.text + ')'
 
-    def __str__(self):
+    def get_iptrules(self):
         """
-        the processed string representation of this rule
+        process the content of this rule
 
         returns:
-            the string representation of this rule
+            a table of iptables rule strings
         """
         rule = []
 
@@ -176,7 +180,7 @@ class Rule():
         # Source port
         if not self._is_any(self.src_port):
             if self._is_any(self.proto):
-                raise ConfigError("protocol must be set when using port in '{0}'".format(self._text))
+                raise ConfigError("protocol must be set when using port in '{0}'".format(self.text))
             if self.src_port_neg is not None:
                 rule.append('!')
             rule.extend(['--sport', str(self._get_port(self.src_port))])
@@ -184,7 +188,7 @@ class Rule():
         # Destination port
         if not self._is_any(self.dst_port):
             if self._is_any(self.proto):
-                raise ConfigError("protocol must be set when using port in '{0}'".format(self._text))
+                raise ConfigError("protocol must be set when using port in '{0}'".format(self.text))
             if self.dst_port_neg is not None:
                 rule.append('!')
             rule.extend(['--dport', str(self._get_port(self.dst_port))])
@@ -192,9 +196,9 @@ class Rule():
         # ICMP Type
         if not self._is_any(self.icmp_type):
             if self._is_any(self.proto):
-                raise ConfigError("protocol must be set when using icmp-type in '{0}'".format(self._text))
+                raise ConfigError("protocol must be set when using icmp-type in '{0}'".format(self.text))
             if self.proto != 'icmp':
-                raise ConfigError("protocol must be 'icmp' when using icmp-type in '{0}'".format(self._text))
+                raise ConfigError("protocol must be 'icmp' when using icmp-type in '{0}'".format(self.text))
             if self.icmp_type_neg is not None:
                 rule.append('!')
             rule.extend(['--icmp-type', str(self.icmp_type)])
@@ -249,11 +253,12 @@ class Rule():
                 raise ConfigError("log prefix requires 'log' or 'nflog' action")
 
         # Jump to custom chain
-        if self.jump_chain is not None:
-            if self._get_chain(self._table, self.jump_chain):
-                rule.extend(['-j', 'custom-{0}'.format(self.jump_chain)])
-            else:
-                raise ConfigError("unknown chain: " + self.jump_chain)
+        # XXX check that
+#        if self.jump_chain is not None:
+#            if self._get_chain(self._table, self.jump_chain):
+#                rule.extend(['-j', 'custom-{0}'.format(self.jump_chain)])
+#            else:
+#                raise ConfigError("unknown chain: " + self.jump_chain)
 
         # Special Cases
         if self.clampmss is not None:
@@ -266,7 +271,7 @@ class Rule():
 
         # Comment
         if self.comment is None:
-            self.comment = '"' + re.sub('"', '\\"', self._text) + '"'
+            self.comment = '"' + re.sub('"', '\\"', self.text) + '"'
         rule.extend(['-m', 'comment', '--comment', str(self.comment)])
 
-        return ' '.join(rule)
+        return [' '.join(rule)]
