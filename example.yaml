@@ -32,18 +32,22 @@ zones:
 
 services:
   http:
-      proto: 'tcp'
-      port: 80
+    proto: 'tcp'
+    port: 80
   dns:
-      proto: 'udp'
-      port: 53
+    proto: 'udp'
+    port: 53
   ping:
-      proto: 'icmp'
-      type: 'echo-request'
+    proto: 'icmp'
+    type: 'echo-request'
+  ssh:
+    proto: 'tcp'
+    port: 22
 
 chains:
-  test1:
-    - 'accept from net1 to service http'
+  filter:
+    test1:
+      - 'accept from net1 to any service http'
 
 rules:
   # syntax is table_chain
@@ -53,8 +57,8 @@ rules:
       # accept state established (free)
       - 'accept service ssh'
       #- 'reject log (prefix=XXX)'
-    to mgt:
-      - 'accept'
+    #to mgt:
+    #  - 'accept'
   filter forward:
     # creates chain forward-mgt-to-sup
     from mgt to sup:
