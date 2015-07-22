@@ -318,20 +318,45 @@ class Firval(object):
                 if chain not in rules[table]:
                     rules[table][chain] = []
 
+                # Customize environment
+                env['basechain'] = basechain
+                env['context'] = {
+                    'izone': izone,
+                    'ozone': ozone,
+                    'iifs': iifs,
+                    'oifs': oifs,
+                    'chain': chain,
+                    'basechain': basechain
+                }
+
+                # Add automatic rules
+                # XXX: add conditions
+                head_rules = []
+                tail_rules = []
+                if True:
+                    head_rules.append('accept state established')
+                if True:
+                    head_rules.append('accept proto icmp type echo-request')
+                if basechain in ['output', 'forward'] and True:
+                    head_rules.append('clampmss')
+
                 # Add rules to the rulechain
-                for rule in data[table_chain][from_to]:
-                    env['basechain'] = basechain
+                for rule in head_rules + data[table_chain][from_to] + tail_rules:
                     iptrules = ['-A {0} {1}'.format(chain, iptrule) for iptrule in Rule(rule, env).get_iptrules()]
                     rules[table][chain].extend(iptrules)
 
         # Add rules for lo-to-lo if asked
         # XXX add condition
         if 'input-from-lo' not in rules['filter']:
+            # Add routing rule
             rulestr = self._generate_routingrule('lo', 'lo',
                                                  None, None,
                                                  'input',
                                                  'input-from-lo')
             routing['filter']['input'].insert(0, rulestr)
+            # Add rule
+            chain = self._build_chainname('input', 'lo', None)
+            rules['filter']['input-from-lo'] = ['-A {0} {1}'.format(chain, iptrule) for iptrule in Rule('accept', env).get_iptrules()]
 
         return { 'routing': routing, 'rules': rules }
 
@@ -367,21 +392,21 @@ class Firval(object):
                 lns.append(':{0} ACCEPT [0:0]'.format(chain.upper()))
 
             # custom routing chains
-            for chain in rules[table]:
+            for chain in sorted(rules[table].keys()):
                 lns.append(':{0} - [0:0]'.format(chain))
 
             # custom chains
             if table in custchains:
-                for chain in custchains[table]:
+                for chain in sorted(custchains[table].keys()):
                     lns.append(':custom-{0} - [0:0]'.format(chain.lower()))
 
             # routing rules
-            for chain in routing[table]:
+            for chain in sorted(routing[table].keys()):
                 for rule in routing[table][chain]:
                     lns.append(rule)
 
             # chain rules
-            for chain in rules[table]:
+            for chain in sorted(rules[table].keys()):
                 for rule in rules[table][chain]:
                     lns.append(rule)
 
