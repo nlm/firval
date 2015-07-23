@@ -90,7 +90,7 @@ class Rule():
         return value is None or value == 'any'
 
 
-    def _get_address(self, name):
+    def _get_address(self, address):
         """
         get an address from the address table
 
@@ -101,9 +101,14 @@ class Rule():
             the address associated with the name
         """
         try:
-            return self.env['addresses'][name]
+            addrs = []
+            for addr in [self.env['addresses'][name] for name in address.split(',')]:
+                addrs.append(addr)
+            return ','.join(addrs)
         except KeyError:
-            return name
+            if re.match(r'^\d+(\.\d+){3}(,\d+(\.\d+){3})*$', address):
+                return address
+            return None
 
 
     def _get_port(self, name):
