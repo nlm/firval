@@ -1,3 +1,4 @@
+from __future__ import print_function, absolute_import
 import re
 import voluptuous
 
@@ -7,23 +8,25 @@ class Rule():
     """
     object representing an iptables rule
     """
+
     pattern = r'^\s*(' + \
         r'(jump\s+(?P<jump_chain>\S+))|' + \
         r'(?P<clampmss>clampmss)|' + \
         r'(?P<setmss>setmss\s+(?P<max_mss>\d+))|' + \
-        r'(?P<action>accept|reject|drop|masquerade|log|nflog)' + \
-        r'(?:(?:\s+(?P<src_neg>not))?\s+from\s+(?P<src_addr>\S+)' + \
-        r'(?:(?:\s+(?P<src_port_neg>not))?\s+port\s+(?P<src_port>\S+))?)?' + \
-        r'(?:(?:\s+(?P<dst_neg>not))?\s+to\s+(?P<dst_addr>\S+)' + \
-        r'(?:(?:\s+(?P<dst_port_neg>not))?\s+port\s+(?P<dst_port>\S+))?)?' + \
+        r'(?P<log>log_)?(?P<action>accept|reject|drop|masquerade)' + \
+        r'(?:(?:\s+(?P<src_neg>not))?\s+from\s+(?P<src_addr>\S+(,\S+)*)' + \
+        r'(?:(?:\s+(?P<src_port_neg>not))?\s+port\s+(?P<src_port>\S+(,\S+)*))?)?' + \
+        r'(?:(?:\s+(?P<dst_neg>not))?\s+to\s+(?P<dst_addr>\S+(,\S+)*)' + \
+        r'(?:(?:\s+(?P<dst_port_neg>not))?\s+port\s+(?P<dst_port>\S+(,\S+)*))?)?' + \
         r'(?:(?:\s+(?P<proto_neg>not))?\s+proto\s+(?P<proto>tcp|udp|icmp|any))?' + \
         r'(?:(?:\s+(?P<icmp_type_neg>not))?\s+type\s+(?P<icmp_type>\S+))?' + \
-        r'(?:\s+service\s+(?P<service>\S+))?' + \
+        r'(?:\s+service\s+(?P<service>\w+(,\w+)*))?' + \
         r'(?:\s+state\s+(?P<state>new|established|invalid))?' + \
         r'(?:\s+limit\s+(?P<limit>\d+/\S)(?:\s+burst\s+(?P<limit_burst>\S+))?)?' + \
         r'(?:\s+comment\s+(?P<comment>"[^"]+"))?' + \
         r'(?:\s+prefix\s+(?P<log_prefix>"[^"]*"))?' + \
         r')\s*$'
+
 
     def __init__(self, text, env):
         """
@@ -37,9 +40,8 @@ class Rule():
         self.data = None
         self.text = text
         self.env = env
-        #self._aliases = aliases if aliases is not None else {}
-        #self._table = table if table is not None else ''
         self.data = self.parse(text)
+
 
     def __getattr__(self, name):
         """
@@ -54,6 +56,7 @@ class Rule():
         if self.data is not None and name in self.data:
             return self.data[name]
         return None
+
 
     @classmethod
     def parse(cls, text):
@@ -72,6 +75,7 @@ class Rule():
         else:
             raise ParseError(text)
 
+
     @staticmethod
     def _is_any(value):
         """
@@ -84,6 +88,7 @@ class Rule():
             True or False
         """
         return value is None or value == 'any'
+
 
     def _get_address(self, name):
         """
@@ -100,6 +105,7 @@ class Rule():
         except KeyError:
             return name
 
+
     def _get_port(self, name):
         """
         get a port from the port table
@@ -113,42 +119,62 @@ class Rule():
         try:
             return self.env['ports'][name]
         except KeyError:
-            return name
+            if re.match(r'^\d+(,\d+)*$', name):
+                return name
+            return None
 
-    def _get_service(self, name):
+
+    def _get_service(self, service):
         """
         get a service from the service table
 
         parameters:
-            name: the name associated with the service
+            service: the name associated with the service
 
         returns:
             the service associated with the name
         """
         try:
-            return self.env['services'][name]
+            proto = None
+            types = []
+            ports = []
+            for service in [self.env['services'][name] for name in service.split(',')]:
+                if proto is None:
+                    proto = service['proto']
+                elif proto != service['proto']:
+                    raise ConfigError('Service {0} with proto {1} mixed with proto {2}'.format(name, service['proto'], proto))
+                if proto == 'icmp':
+                    types.append(service['type'])
+                else:
+                    ports.append(service['port'])
+            if proto == 'icmp':
+                return {'proto': proto, 'type': ','.join(types)}
+            else:
+                return {'proto': proto, 'port': ','.join([str(port) for port in ports])}
         except KeyError:
             return None
 
-#    def _get_chain(self, table, name):
-#        """
-#        get a chain from the chains table
-#
-#        parameters:
-#            table: the table in which the chain is
-#            name: the name associated with the chain
-#
-#        returns:
-#            the chain associated with the name
-#        """
-#        try:
-#            return self._aliases['chains'][table][name]
-#        except KeyError:
-#            return None
+
+    def _get_chain(self, table, name):
+        """
+        get a chain from the chains table
+
+        parameters:
+            table: the table in which the chain is
+            name: the name associated with the chain
+
+        returns:
+            the chain associated with the name
+        """
+        try:
+            return self.env['custchains'][table][name]
+        except KeyError:
+            return None
 
 
     def __repr__(self):
         return self.__class__.__name__ + '(' + self.text + ')'
+
 
     def get_iptrules(self):
         """
@@ -208,6 +234,8 @@ class Rule():
             if not self._is_any(self.dst_port) or not self._is_any(self.proto):
                 raise ConfigError('service conflicts with dport or proto:', self.service)
             service = self._get_service(self.service)
+            print('coucou ' + str(self.service))
+            print('service is {}'.format(service))
             if service is None:
                 raise ConfigError('unknown service: ' + self.service)
             rule.extend(['-p', service['proto']])
@@ -243,14 +271,14 @@ class Rule():
         if self.action == 'reject':
             rule.extend(['--reject-with', 'icmp-host-prohibited'])
 
-        # Prefix
-        if self.log_prefix is not None:
-            if self.action == 'log':
-                rule.extend(['--log-prefix', str(self.log_prefix)])
-            elif self.action == 'nflog':
-                rule.extend(['--nflog-prefix', str(self.log_prefix)])
-            else:
-                raise ConfigError("log prefix requires 'log' or 'nflog' action")
+#        # Prefix
+#        if self.log_prefix is not None:
+#            if self.action == 'log':
+#                rule.extend(['--log-prefix', str(self.log_prefix)])
+#            elif self.action == 'nflog':
+#                rule.extend(['--nflog-prefix', str(self.log_prefix)])
+#            else:
+#                raise ConfigError("log prefix requires 'log' or 'nflog' action")
 
         # Jump to custom chain
         # XXX check that
