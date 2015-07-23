@@ -48,8 +48,8 @@ class Firval(object):
 
     _syschains = {
         'filter': ('input', 'forward', 'output'),
-        'nat': ('prerouting', 'input', 'output', 'postrouting'),
-        'mangle': ('prerouting', 'input', 'forward', 'output', 'postrouting')
+        'nat': ('input', 'prerouting', 'output', 'postrouting'),
+        'mangle': ('input', 'prerouting', 'forward', 'output', 'postrouting')
     }
 
     _chainsdir = {
