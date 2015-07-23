@@ -22,7 +22,8 @@ class Rule():
         r'(?:(?:\s+(?P<icmp_type_neg>not))?\s+type\s+(?P<icmp_type>\S+))?' + \
         r'(?:\s+service\s+(?P<service>\w+(,\w+)*))?' + \
         r'(?:\s+state\s+(?P<state>new|established|invalid))?' + \
-        r'(?:\s+limit\s+(?P<limit>\d+/\S)(?:\s+burst\s+(?P<limit_burst>\S+))?)?' + \
+        r'(?:\s+limit\s+(?P<limit>\d+/(s(econd)*|m(inute)*|h(our)*|d(ay)*))' + \
+        r'(?:\s+burst\s+(?P<limit_burst>\S+))?)?' + \
         r'(?:\s+comment\s+(?P<comment>"[^"]+"))?' + \
         r'(?:\s+prefix\s+(?P<log_prefix>"[^"]*"))?' + \
         r')\s*$'
@@ -128,6 +129,28 @@ class Rule():
                 return name
             return None
 
+    @staticmethod
+    def expand_ports(portspec):
+        """
+        expands a portspec
+
+        parameters:
+            portspec: a port spec in the form 12-34,47,20
+
+        returns:
+            a comma-separated list of ports
+        """
+        portlist = []
+        for ranges in portspec.split(','):
+            for ports in ranges.split('-'):
+                if len(ports) > 1:
+                    portlist.extend(range(int(ports[0]),
+                                    int(ports[1]) + 1))
+                else:
+                    portlist.append(int(ports[0]))
+                print(portlist)
+        return ','.join([str(x) for x in portlist])
+
 
     def _get_service(self, service):
         """
@@ -172,6 +195,7 @@ class Rule():
             the chain associated with the name
         """
         try:
+            print("need {} {}".format(table, name))
             return self.env['custchains'][table][name]
         except KeyError:
             return None
@@ -286,12 +310,12 @@ class Rule():
 #                raise ConfigError("log prefix requires 'log' or 'nflog' action")
 
         # Jump to custom chain
-        # XXX check that
-#        if self.jump_chain is not None:
-#            if self._get_chain(self._table, self.jump_chain):
-#                rule.extend(['-j', 'custom-{0}'.format(self.jump_chain)])
-#            else:
-#                raise ConfigError("unknown chain: " + self.jump_chain)
+        if self.jump_chain is not None:
+            print(self.env)
+            if self._get_chain(self.env['context']['table'], self.jump_chain):
+                rule.extend(['-j', 'custom-{0}'.format(self.jump_chain)])
+            else:
+                raise ConfigError("unknown chain: " + self.jump_chain)
 
         # Special Cases
         if self.clampmss is not None:

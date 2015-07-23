@@ -350,11 +350,11 @@ class Firval(object):
                     'iifs': iifs,
                     'oifs': oifs,
                     'chain': chain,
-                    'basechain': basechain
+                    'basechain': basechain,
+                    'table': table,
                 }
 
                 # Add automatic rules
-                # XXX: add conditions
                 head_rules = []
                 tail_rules = []
                 if env['parameters'].get('auto_drop_invalid'):
@@ -458,6 +458,7 @@ class Firval(object):
             'ports': self.data.get('ports', {}),
             'services': self.data.get('services', {}),
             'parameters': self.data.get('parameters', {}),
+            'custchains': self.data.get('chains', {}),
         }
 
         #for interface in self._get_interfaces('mgt'):
