@@ -64,6 +64,7 @@ class Firval(object):
         'auto_accept_ping': False,
         'auto_accept_established': False,
         'auto_accept_lo': True,
+        'auto_drop_invalid': False,
         'auto_clamp_mss': True,
         'reject_with': 'icmp-host-prohibited',
         'log': 'nflog',
@@ -356,6 +357,8 @@ class Firval(object):
                 # XXX: add conditions
                 head_rules = []
                 tail_rules = []
+                if env['parameters'].get('auto_drop_invalid'):
+                    head_rules.append('drop state invalid')
                 if env['parameters'].get('auto_accept_established'):
                     head_rules.append('accept state established')
                 if env['parameters'].get('auto_accept_ping'):
