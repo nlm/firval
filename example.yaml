@@ -55,8 +55,9 @@ rules:
   filter input:
     from mgt:
       # accept state established (free)
+      - 'accept service http,ssh'
       - 'accept service ssh'
-      #- 'reject log (prefix=XXX)'
+      - 'log_reject'
     #to mgt:
     #  - 'accept'
   filter forward:
