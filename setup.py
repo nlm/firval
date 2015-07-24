@@ -1,8 +1,8 @@
 from setuptools import setup,find_packages
 
 setup(
-    name = "firval2",
-    version = "2.0.0",
+    name = "firval",
+    version = "2.0a1",
     packages = find_packages(),
     author = "Nicolas Limage",
     description = "a netfilter firewall rules generator designed designed to be easy to read, write and maintain",
