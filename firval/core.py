@@ -1,3 +1,4 @@
+from __future__ import print_function, absolute_import
 import sys
 import re
 from datetime import datetime
@@ -156,12 +157,12 @@ class Firval(object):
             },
             Optional('ports'): {
                 All(str, Match(cls.re['object'])):
-                    Any(int, Match(r'^\d+(,\d+)*$'))
+                    Any(int, Match(Rule.re['portspec']))
             },
             Optional('services'): {
                 All(str, Match(cls.re['object'])): {
                     Required('proto'): All(str, In(cls.protocols)),
-                    'port': Any(int, Match(r'^\d+(,\d+)*$')),
+                    'port': Any(int, Match(Rule.re['portspec'])),
                     'type': All(str, In(cls.icmp_types)),
                 }
             },
@@ -293,7 +294,6 @@ class Firval(object):
         # Table (ex: filter) and basechain (ex: input) ########################
         for table_chain in data:
 
-            print(table_chain)
             table, basechain = re.split('\s+', table_chain)
 
             # initialize routing table
@@ -305,8 +305,6 @@ class Firval(object):
             # initialize rules table
             if table not in rules:
                 rules[table] = {}
-
-            print('# {} {}'.format(table, basechain))
 
             # From and To informations ########################################
             for from_to in data[table_chain]:
@@ -470,8 +468,8 @@ class Firval(object):
         # Custom Chains Generation #############################################
         iptdata['custchains'] = self.generate_customchains(self.data.get('chains', {}), dict(env))
 
-        from pprint import pprint
-        pprint(iptdata)
+        #from pprint import pprint
+        #pprint(iptdata)
 
 
         # Rules Output #########################################################

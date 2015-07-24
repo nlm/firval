@@ -1,4 +1,5 @@
 from __future__ import print_function, absolute_import
+
 import re
 import voluptuous
 
@@ -24,10 +25,13 @@ class Rule():
         r'(?:\s+state\s+(?P<state>new|established|invalid))?' + \
         r'(?:\s+limit\s+(?P<limit>\d+/(s(econd)*|m(inute)*|h(our)*|d(ay)*))' + \
         r'(?:\s+burst\s+(?P<limit_burst>\S+))?)?' + \
-        r'(?:\s+comment\s+(?P<comment>"[^"]+"))?' + \
         r'(?:\s+prefix\s+(?P<log_prefix>"[^"]*"))?' + \
         r')\s*$'
 
+    re = {
+        'portspec': r'^\d+(-\d+)?(,\d+(-\d+)?)*$',
+        'ipspec': r'^\d+(\.\d+){3}(,\d+(\.\d+){3})*$',
+    }
 
     def __init__(self, text, env):
         """
@@ -41,6 +45,7 @@ class Rule():
         self.data = None
         self.text = text
         self.env = env
+        self.modules = []
         self.data = self.parse(text)
 
 
@@ -62,7 +67,8 @@ class Rule():
     @classmethod
     def parse(cls, text):
         """
-        parse some text and return an attribute dict
+        parse text and return an attribute dict
+        if it matches a rule pattern
 
         parameters:
             text: the rule text in firval language
@@ -109,47 +115,44 @@ class Rule():
         except KeyError:
             if re.match(r'^\d+(\.\d+){3}(,\d+(\.\d+){3})*$', address):
                 return address
-            return None
+            raise ConfigError("address '{0}' not found".format(address))
 
 
-    def _get_port(self, name):
+    def _get_port(self, value):
         """
-        get a port from the port table
+        get a portspec from the port table
 
         parameters:
-            name: the name associated with the port
+            value: the name associated with the port
+                   or a portspec (ex: 22,80-90)
 
         returns:
-            the port associated with the name
+            a portspec
+        """
+        return ','.join([str(self._get_portnum(port)) for port in value.split(',')])
+
+    def _get_portnum(self, value):
+        """
+        get a port number from the port table
         """
         try:
-            return self.env['ports'][name]
+            return self.env['ports'][value]
         except KeyError:
-            if re.match(r'^\d+(,\d+)*$', name):
-                return name
-            return None
+            if re.match(r'^\d+$', value):
+                return value
+            raise ConfigError("port '{0}' not found".format(value))
 
-    @staticmethod
-    def expand_ports(portspec):
-        """
-        expands a portspec
-
-        parameters:
-            portspec: a port spec in the form 12-34,47,20
-
-        returns:
-            a comma-separated list of ports
-        """
+    @classmethod
+    def portspec_to_mp(cls, portspec):
+        if not re.match(cls.re['portspec'], portspec):
+            raise ParseError('{0} is not valid portspec'.format(portspec))
         portlist = []
         for ranges in portspec.split(','):
-            for ports in ranges.split('-'):
-                if len(ports) > 1:
-                    portlist.extend(range(int(ports[0]),
-                                    int(ports[1]) + 1))
-                else:
-                    portlist.append(int(ports[0]))
-                print(portlist)
+            ports = sorted([int(x) for x in ranges.split('-')])
+            portlist.append(':'.join([str(x) for x in ports]))
         return ','.join([str(x) for x in portlist])
+        #return ','.join([str(x) for x in sorted(set(portlist),
+        #                                        lambda x, y: cmp(int(x), int(y)))])
 
 
     def _get_service(self, service):
@@ -180,7 +183,7 @@ class Rule():
             else:
                 return {'proto': proto, 'port': ','.join([str(port) for port in ports])}
         except KeyError:
-            return None
+            raise ConfigError('service not found')
 
 
     def _get_chain(self, table, name):
@@ -195,7 +198,6 @@ class Rule():
             the chain associated with the name
         """
         try:
-            print("need {} {}".format(table, name))
             return self.env['custchains'][table][name]
         except KeyError:
             return None
@@ -204,6 +206,11 @@ class Rule():
     def __repr__(self):
         return self.__class__.__name__ + '(' + self.text + ')'
 
+    def include_module(self, modulename):
+        if modulename not in self.modules:
+            self.modules.append(modulename)
+            return ['-m', modulename]
+        return []
 
     def get_iptrules(self):
         """
@@ -238,7 +245,12 @@ class Rule():
                 raise ConfigError("protocol must be set when using port in '{0}'".format(self.text))
             if self.src_port_neg is not None:
                 rule.append('!')
-            rule.extend(['--sport', str(self._get_port(self.src_port))])
+            portspec = self._get_port(self.src_port)
+            if re.match('^\d+$', portspec):
+                rule.extend(['--sport', str(portspec)])
+            else:
+                rule.extend(self.include_module('multiport'))
+                rule.extend(['--sports', self.portspec_to_mp(portspec)])
 
         # Destination port
         if not self._is_any(self.dst_port):
@@ -246,7 +258,12 @@ class Rule():
                 raise ConfigError("protocol must be set when using port in '{0}'".format(self.text))
             if self.dst_port_neg is not None:
                 rule.append('!')
-            rule.extend(['--dport', str(self._get_port(self.dst_port))])
+            portspec = self._get_port(self.dst_port)
+            if re.match('^\d+$', portspec):
+                rule.extend(['--dport', str(portspec)])
+            else:
+                rule.extend(self.include_module('multiport'))
+                rule.extend(['--dports', self.portspec_to_mp(portspec)])
 
         # ICMP Type
         if not self._is_any(self.icmp_type):
@@ -263,21 +280,16 @@ class Rule():
             if not self._is_any(self.dst_port) or not self._is_any(self.proto):
                 raise ConfigError('service conflicts with dport or proto:', self.service)
             service = self._get_service(self.service)
-            print('coucou ' + str(self.service))
-            print('service is {}'.format(service))
             if service is None:
                 raise ConfigError('unknown service: ' + self.service)
             rule.extend(['-p', service['proto']])
             if service['proto'] in ['tcp', 'udp']:
-                if re.match(r'^\d+(,\d+)*$', str(service['port'])):
-                    ports = re.split(',', str(service['port']))
-                    if len(ports) > 1:
-                        rule.extend(['-m', 'multiport'])
-                        rule.extend(['--dports', str(service['port'])])
-                    else:
-                        rule.extend(['--dport', str(service['port'])])
+                portspec = service['port']
+                if re.match('^\d+$', portspec):
+                    rule.extend(['--dport', str(portspec)])
                 else:
-                    rule.extend(['--dport', str(service['port'])])
+                    rule.extend(self.include_module('multiport'))
+                    rule.extend(['--dports', self.portspec_to_mp(portspec)])
 
         # State
         if not self._is_any(self.state):
@@ -311,7 +323,6 @@ class Rule():
 
         # Jump to custom chain
         if self.jump_chain is not None:
-            print(self.env)
             if self._get_chain(self.env['context']['table'], self.jump_chain):
                 rule.extend(['-j', 'custom-{0}'.format(self.jump_chain)])
             else:
@@ -327,8 +338,7 @@ class Rule():
             rule.extend(['--set-mss', '{0}'.format(self.max_mss)])
 
         # Comment
-        if self.comment is None:
-            self.comment = '"' + re.sub('"', '\\"', self.text) + '"'
+        self.comment = '"' + re.sub('"', '\\"', self.text) + '"'
         rule.extend(['-m', 'comment', '--comment', str(self.comment)])
 
         return [' '.join(rule)]
