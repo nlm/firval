@@ -85,6 +85,9 @@ chains:
       - 'accept to any port http,https proto tcp'
       - 'accept to any port simple,comma,range,revrange,mulrange,mixed proto tcp'
       - 'accept service simple,comma,range,revrange,mulrange,mixed'
+    testlog:
+      - 'log prefix "coucou"'
+      - 'log_drop'
     test1:
       - 'accept from net1 to any service http'
       - 'accept from host1,host2 to net1,net2 service http,ssh'
@@ -108,6 +111,7 @@ rules:
       - 'accept'
     from mgt to pub:
       - 'accept'
+      - 'log prefix "coucou"'
     from pub to mgt:
       - 'accept state established'
       - 'jump test1'
