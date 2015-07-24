@@ -1,7 +1,13 @@
 
-#ports:
-#  http: 80
-#  https: 443
+ports:
+  http: 80
+  https: 443
+  simple: 100
+  comma: 200,201,302
+  range: 1025-65535
+  revrange: 1000-500
+  mulrange: 10-19,20-29
+  mixed: 300,401-420
 
 parameters:
   auto_accept_ping: true
@@ -46,9 +52,39 @@ services:
   rsh:
     proto: 'tcp'
     port: 22,23
+  http:
+    proto: 'tcp'
+    port: 80
+  https:
+    proto: tcp
+    port: 443
+  simple:
+    proto: tcp
+    port: 100
+  comma:
+    proto: tcp
+    port: 200,201,302
+  range:
+    proto: tcp
+    port: 1025-65535
+  revrange:
+    proto: tcp
+    port: 1000-500
+  mulrange:
+    proto: tcp
+    port: 10-19,20-29
+  mixed:
+    proto: tcp
+    port: 300,401-420
+
 
 chains:
   filter:
+    testports:
+      - 'accept to any port comma proto tcp'
+      - 'accept to any port http,https proto tcp'
+      - 'accept to any port simple,comma,range,revrange,mulrange,mixed proto tcp'
+      - 'accept service simple,comma,range,revrange,mulrange,mixed'
     test1:
       - 'accept from net1 to any service http'
       - 'accept from host1,host2 to net1,net2 service http,ssh'
