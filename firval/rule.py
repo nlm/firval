@@ -5,7 +5,7 @@ import voluptuous
 
 from .exception import ConfigError, ParseError
 
-class Rule():
+class Rule(object):
     """
     object representing an iptables rule
     """

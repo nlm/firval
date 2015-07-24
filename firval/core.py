@@ -64,11 +64,11 @@ class Firval(object):
     _default_parameters = {
         'auto_accept_ping': False,
         'auto_accept_established': False,
-        'auto_accept_lo': True,
+        'auto_accept_lo': False,
         'auto_drop_invalid': False,
-        'auto_clamp_mss': True,
+        'auto_clamp_mss': False,
         'reject_with': 'icmp-host-prohibited',
-        'log': 'nflog',
+        'log': 'log',
     }
 
     def __init__(self, obj):
@@ -137,7 +137,7 @@ class Firval(object):
                 'auto_accept_lo': bool,
                 'auto_clamp_mss': bool,
                 'reject_with': All(str, In(cls.icmp_reject_types)),
-                'log': All(str, In(['syslog', 'nflog']))
+                'log': All(str, In(['log', 'nflog']))
             },
             Optional('zones'): {
                 All(str, Match(cls.re['object'])): [
@@ -192,7 +192,6 @@ class Firval(object):
                                                                                                     from_to,
                                                                                                     elt,
                                                                                                     basechain))
-        print('# schema validation ok')
         return data
 
     def _get_interfaces(self, zone):
@@ -291,22 +290,19 @@ class Firval(object):
         routing = {}
         custchains = {}
 
-        # Table (ex: filter) and basechain (ex: input) ########################
+        # Initialize data structs ##############################################
+        for table in self._syschains.keys():
+            routing[table] = {}
+            rules[table] = {}
+            for basechain in self._syschains[table]:
+                routing[table][basechain] = []
+
+        # Table (ex: filter) and basechain (ex: input) #########################
         for table_chain in data:
 
             table, basechain = re.split('\s+', table_chain)
 
-            # initialize routing table
-            if table not in routing:
-                routing[table] = {}
-            if basechain not in routing[table]:
-                routing[table][basechain] = []
-
-            # initialize rules table
-            if table not in rules:
-                rules[table] = {}
-
-            # From and To informations ########################################
+            # From and To informations #########################################
             for from_to in data[table_chain]:
 
                 # get info needed for generation
@@ -371,7 +367,7 @@ class Firval(object):
 
         # Add rules for lo-to-lo if asked
         # XXX add condition
-        if 'input-from-lo' not in rules['filter']:
+        if env['parameters'].get('auto_accept_lo') and 'input-from-lo' not in rules['filter']:
             # Add routing rule
             chain = self._build_chainname('input', 'lo', None)
             rulestr = self._generate_routingrule('lo', 'lo', None, None,
