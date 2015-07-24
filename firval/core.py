@@ -392,6 +392,10 @@ class Firval(object):
             custchains[table] = {}
             for chain in data[table]:
                 custchains[table][chain] = []
+                env['context'] = {
+                    'chain': chain,
+                    'table': table,
+                }
                 for rule in data[table][chain]:
                     iptrules = ['-A {0} {1}'.format(chain, iptrule) for iptrule in Rule(rule, env).get_iptrules()]
                     custchains[table][chain].extend(iptrules)

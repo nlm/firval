@@ -14,7 +14,7 @@ class Rule():
         r'(jump\s+(?P<jump_chain>\S+))|' + \
         r'(?P<clampmss>clampmss)|' + \
         r'(?P<setmss>setmss\s+(?P<max_mss>\d+))|' + \
-        r'(?P<log>log_)?(?P<action>accept|reject|drop|masquerade)' + \
+        r'(?P<log>log_)?(?P<action>accept|reject|drop|masquerade|log)' + \
         r'(?:(?:\s+(?P<src_neg>not))?\s+from\s+(?P<src_addr>\S+(,\S+)*)' + \
         r'(?:(?:\s+(?P<src_port_neg>not))?\s+port\s+(?P<src_port>\S+(,\S+)*))?)?' + \
         r'(?:(?:\s+(?P<dst_neg>not))?\s+to\s+(?P<dst_addr>\S+(,\S+)*)' + \
@@ -206,11 +206,37 @@ class Rule():
     def __repr__(self):
         return self.__class__.__name__ + '(' + self.text + ')'
 
+
     def include_module(self, modulename):
         if modulename not in self.modules:
             self.modules.append(modulename)
             return ['-m', modulename]
         return []
+
+
+    def make_logrule(self, action):
+        ctx = self.env.get('context', {})
+        rule = []
+        rule.extend(['-j', self.env['parameters']['log']])
+        rule.append('--{0}-prefix'.format(self.env['parameters']['log']))
+#        rule.append('"firval: ACT={action} DIR={mode} IZN={izone} OZN={ozone} CHN={chain}"'\
+#            .format(action=action.upper(),
+#                    mode=ctx.get('basechain', '').upper(),
+#                    izone=ctx.get('izone') or '',
+#                    ozone=ctx.get('ozone') or '',
+#                    chain=ctx.get('chain').upper() or '',
+#            )
+#        )
+        rule.append('"firval: ACT={action} CHN={chain}{spc}"'\
+            .format(action=action.upper(),
+                    chain=ctx.get('chain'),
+                    spc=(' ' if self.env['parameters']['log'] == 'log' else '')))
+
+        rule.extend(self.include_module('comment'))
+        rule.extend(['--comment', '"log"'])
+
+        return ' '.join(rule)
+
 
     def get_iptrules(self):
         """
@@ -293,33 +319,36 @@ class Rule():
 
         # State
         if not self._is_any(self.state):
+            rule.extend(self.include_module('state'))
             if self.state == 'new':
-                rule.extend(['-m', 'state', '--state', 'NEW'])
+                rule.extend(['--state', 'NEW'])
             elif self.state == 'established':
-                rule.extend(['-m', 'state', '--state', 'ESTABLISHED,RELATED'])
+                rule.extend(['--state', 'ESTABLISHED,RELATED'])
             elif self.state == 'invalid':
-                rule.extend(['-m', 'state', '--state', 'INVALID'])
+                rule.extend(['--state', 'INVALID'])
 
         # Limit
         if self.limit is not None:
-            rule.extend(['-m', 'limit', '--limit', str(self.limit)])
+            rule.extend(self.include_module('limit'))
+            rule.extend(['--limit', str(self.limit)])
             if not self._is_any(self.limit_burst):
                 rule.extend(['--limit-burst', str(self.limit_burst)])
 
         # Actions
-        if self.action is not None:
+        if self.action == 'log':
+            rule.extend(['-j', str(self.env['parameters']['log'])])
+        elif self.action is not None:
             rule.extend(['-j', str(self.action.upper())])
+
+        # Actions parameters
         if self.action == 'reject':
             rule.extend(['--reject-with', 'icmp-host-prohibited'])
-
-#        # Prefix
-#        if self.log_prefix is not None:
-#            if self.action == 'log':
-#                rule.extend(['--log-prefix', str(self.log_prefix)])
-#            elif self.action == 'nflog':
-#                rule.extend(['--nflog-prefix', str(self.log_prefix)])
-#            else:
-#                raise ConfigError("log prefix requires 'log' or 'nflog' action")
+        elif self.action == 'log':
+            if self.log_prefix is not None:
+                rule.extend(['--{0}-prefix'.format(self.env['parameters']['log']),
+                            str(self.log_prefix)])
+            else:
+                raise ConfigError("log prefix requires 'log' or 'nflog' action")
 
         # Jump to custom chain
         if self.jump_chain is not None:
@@ -339,6 +368,11 @@ class Rule():
 
         # Comment
         self.comment = '"' + re.sub('"', '\\"', self.text) + '"'
-        rule.extend(['-m', 'comment', '--comment', str(self.comment)])
+        rule.extend(self.include_module('comment'))
+        rule.extend(['--comment', str(self.comment)])
 
-        return [' '.join(rule)]
+        logrules = []
+        if self.log is not None:
+            logrules.append(self.make_logrule(self.action))
+
+        return logrules + [' '.join(rule)]
