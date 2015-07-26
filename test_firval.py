@@ -3,28 +3,77 @@ from firval.core import Firval
 from firval.rule import Rule
 from firval.exception import ParseError, ConfigError
 from voluptuous import MultipleInvalid
+from netaddr import AddrFormatError
 
 
-class FirvalTest(unittest.TestCase):
-
+class FirvalSimpleTest(unittest.TestCase):
 
     def setUp(self):
-        self.data = {
-            'rules': {
-            }
-        }
+        self.firval = Firval({ 'rules': {} })
 
     def test_invalid_data(self):
         self.assertRaises(MultipleInvalid, Firval, {})
 
     def test_simple(self):
-        firval = Firval({ 'rules': {} })
-        output = str(firval)
+        output = str(self.firval)
         self.assertEqual(20, len(output.split("\n")))
 
     def test_gettablechains(self):
-        #self.firval._get_tableschains()
-        self.assertEqual(1, 1)
+        self.assertEqual(len(self.firval._get_tableschains()), 12)
+
+
+    def test_validateipaddr(self):
+        addresses = (
+            '192.168.10.20',
+            '192.168.10.0/23',
+            '1.1.1.1',
+            '255.255.255.255',
+        )
+        for addr in addresses:
+            self.firval._validate_addr(addr)
+
+        self.assertRaises(AddrFormatError, self.firval._validate_addr, '192.168.290.2')
+        self.assertRaises(AddrFormatError, self.firval._validate_addr, 'test')
+        self.assertRaises(AddrFormatError, self.firval._validate_addr, '192.168..2')
+        self.assertRaises(AddrFormatError, self.firval._validate_addr, '1120.168.290.2')
+
+
+    def test_buildchainname(self):
+        dataset = (
+            (('input', 'exmpl', 'tst'), 'input-from-exmpl-to-tst'),
+            (('output', None, 'tst'), 'output-to-tst'),
+            (('forward', 'trial', None), 'forward-from-trial'),
+            (('forward', None, None), 'forward-default'),
+            (('input', None, None), 'input-default'),
+        )
+
+        for data in dataset:
+            self.assertEqual(self.firval._build_chainname(*data[0]), data[1])
+
+
+    def test_generateroutingrule(self):
+        dataset = (
+            (('izn', 'eth0', 'ozn', 'eth1', 'input', 'input-from-izn-to-ozn'),
+             '-A INPUT -i eth0 -o eth1 -j input-from-izn-to-ozn ' \
+             '-m comment --comment "routing input-from-izn-to-ozn"'),
+            (('zone0', 'eth2', 'zone1', 'eth4', 'forward', 'forward-from-zone0-to-zone1'),
+             '-A FORWARD -i eth2 -o eth4 -j forward-from-zone0-to-zone1 ' \
+             '-m comment --comment "routing forward-from-zone0-to-zone1"'),
+            ((None, None, 'zone1', 'eth1', 'forward', 'forward-to-zone1'),
+             '-A FORWARD -o eth1 -j forward-to-zone1 ' \
+             '-m comment --comment "routing forward-to-zone1"'),
+            (('zone0', 'eth0', None, None, 'input', 'input-from-zone0'),
+             '-A INPUT -i eth0 -j input-from-zone0 ' \
+             '-m comment --comment "routing input-from-zone0"'),
+        )
+        for data in dataset:
+            self.assertEqual(self.firval._generate_routingrule(*data[0]), data[1])
+
+
+class FirvalTest(unittest.TestCase):
+
+    def setUp(self):
+        self.firval = Firval({ 'rules': {} })
 
 
 #class RuleTest(unittest.TestCase):
