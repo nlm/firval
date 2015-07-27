@@ -207,7 +207,8 @@ class Firval(object):
             return None
         if zone not in self.data.get('zones', {}):
             raise ConfigError('zone not in config')
-        return [elt.keys()[0] if type(elt) is dict else elt for elt in [iface for iface in self.data['zones'][zone]]]
+        return [list(elt.keys())[0] if type(elt) is dict else elt \
+                for elt in [iface for iface in self.data['zones'][zone]]]
 
     def _get_interface_filters(self, zone, interface):
         """
@@ -222,7 +223,9 @@ class Firval(object):
         if interface not in self._get_interfaces(zone):
             raise ConfigError('interface "{0}/{1}" not in config'.format(zone, interface))
 
-        return [elt.values()[0] for elt in [iface for iface in self.data['zones'][zone]] if type(elt) is dict]
+        return [list(elt.values())[0] for elt \
+                in [iface for iface in self.data['zones'][zone]] \
+                if type(elt) is dict]
 
     @staticmethod
     def _build_chainname(basechain, fromzone, tozone):
