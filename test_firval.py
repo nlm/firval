@@ -1,3 +1,4 @@
+from __future__ import print_function, absolute_import
 import unittest
 from firval.core import Firval
 from firval.rule import Rule
@@ -52,25 +53,6 @@ class FirvalCoreSimpleTests(unittest.TestCase):
 
         for data in dataset:
             self.assertEqual(self.firval._build_chainname(*data[0]), data[1])
-
-    def test_generateroutingrule(self):
-        dataset = (
-            (('izn', 'eth0', 'ozn', 'eth1', 'input', 'input-from-izn-to-ozn'),
-             '-A INPUT -i eth0 -o eth1 -j input-from-izn-to-ozn ' \
-             '-m comment --comment "routing input-from-izn-to-ozn"'),
-            (('zone0', 'eth2', 'zone1', 'eth4', 'forward', 'forward-from-zone0-to-zone1'),
-             '-A FORWARD -i eth2 -o eth4 -j forward-from-zone0-to-zone1 ' \
-             '-m comment --comment "routing forward-from-zone0-to-zone1"'),
-            ((None, None, 'zone1', 'eth1', 'forward', 'forward-to-zone1'),
-             '-A FORWARD -o eth1 -j forward-to-zone1 ' \
-             '-m comment --comment "routing forward-to-zone1"'),
-            (('zone0', 'eth0', None, None, 'input', 'input-from-zone0'),
-             '-A INPUT -i eth0 -j input-from-zone0 ' \
-             '-m comment --comment "routing input-from-zone0"'),
-        )
-
-        for data in dataset:
-            self.assertEqual(self.firval._generate_routingrule(*data[0]), data[1])
 
     def test_validate(self):
         dataset = (
@@ -140,8 +122,8 @@ class FirvalCoreTests(unittest.TestCase):
 
     def test_get_interface_filters(self):
         firval = Firval({'rules': {}, 'zones': self.zones})
-        self.assertEqual(firval._get_interface_filters(None, 'x'), None)
-        self.assertEqual(firval._get_interface_filters('x', None), None)
+        self.assertEqual(firval._get_interface_filters(None, 'x'), [])
+        self.assertEqual(firval._get_interface_filters('x', None), [])
         self.assertRaises(ConfigError, firval._get_interface_filters,
                           'nonexistent', 'eth0')
         self.assertRaises(ConfigError, firval._get_interface_filters,
@@ -150,6 +132,27 @@ class FirvalCoreTests(unittest.TestCase):
                           'zone0', 'eth3')
         self.assertEqual(firval._get_interface_filters('zone0', 'eth0'), [])
         self.assertEqual(firval._get_interface_filters('zone1', 'eth3'), ['127.0.0.1'])
+
+    def test_generateroutingrule(self):
+        firval = Firval({'rules': self.rules, 'zones': self.zones})
+        dataset = (
+#            (('zone0', 'eth0', 'zone1', 'eth2', 'input', 'input-from-zone0-to-zone1'),
+#             '-A INPUT -i eth0 -o eth2 -j input-from-zone0-to-zone1 ' \
+#             '-m comment --comment "routing input-from-zone0-to-zone1"'),
+
+#            (('zone0', 'eth1', 'zone1', 'eth3', 'forward', 'forward-from-zone0-to-zone1'),
+#             '-A FORWARD -i eth1 -o eth3 -j forward-from-zone0-to-zone1 ' \
+#             '-m comment --comment "routing forward-from-zone0-to-zone1"'),
+#            ((None, None, 'zone1', 'eth2', 'forward', 'forward-to-zone1'),
+#             '-A FORWARD -o eth2 -j forward-to-zone1 ' \
+#             '-m comment --comment "routing forward-to-zone1"'),
+            (('zone0', 'eth0', None, None, 'input', 'input-from-zone0'),
+             '-A INPUT -i eth0 -j input-from-zone0 ' \
+             '-m comment --comment "routing input-from-zone0"'),
+        )
+
+        for data in dataset:
+            self.assertEqual(firval._generate_routingrule(*data[0]), [data[1]])
 
     def test_generate_rulesdata(self):
         firval = Firval({'rules': self.rules, 'zones': self.zones})
@@ -308,19 +311,19 @@ class RuleTest(unittest.TestCase):
     def test_match_simple(self):
         print()
         for rule, text in self.checkset:
-            print('>>> ' + rule)
+            print('-- ' + rule)
             result = Rule(rule, self.env).get_iptrules()
             self.assertEqual(result[0], text)
 
     def test_parseerror(self):
         print()
         for rule in self.parseerror:
-            print('>>> ' + rule)
+            print('-- ' + rule)
             self.assertRaises(ParseError, Rule, rule, self.env)
 
     def test_configerror(self):
         print()
         for rule in self.configerror:
-            print('>>> ' + rule)
+            print('-- ' + rule)
             self.assertRaises(ConfigError, Rule(rule, self.env).get_iptrules)
 
