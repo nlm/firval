@@ -6,7 +6,7 @@ from voluptuous import MultipleInvalid
 from netaddr import AddrFormatError
 
 
-class FirvalSimpleTest(unittest.TestCase):
+class FirvalCoreSimpleTests(unittest.TestCase):
 
     def setUp(self):
         self.firval = Firval({ 'rules': {} })
@@ -21,6 +21,10 @@ class FirvalSimpleTest(unittest.TestCase):
     def test_gettablechains(self):
         self.assertEqual(len(self.firval._get_tableschains()), 12)
 
+    def test_structs(self):
+        self.assertTrue(len(self.firval.icmp_types) > 0)
+        self.assertTrue(len(self.firval.protocols) > 0)
+        self.assertTrue(len(self.firval.icmp_reject_types) > 0)
 
     def test_validateipaddr(self):
         addresses = (
@@ -37,7 +41,6 @@ class FirvalSimpleTest(unittest.TestCase):
         self.assertRaises(AddrFormatError, self.firval._validate_addr, '192.168..2')
         self.assertRaises(AddrFormatError, self.firval._validate_addr, '1120.168.290.2')
 
-
     def test_buildchainname(self):
         dataset = (
             (('input', 'exmpl', 'tst'), 'input-from-exmpl-to-tst'),
@@ -49,7 +52,6 @@ class FirvalSimpleTest(unittest.TestCase):
 
         for data in dataset:
             self.assertEqual(self.firval._build_chainname(*data[0]), data[1])
-
 
     def test_generateroutingrule(self):
         dataset = (
@@ -66,8 +68,48 @@ class FirvalSimpleTest(unittest.TestCase):
              '-A INPUT -i eth0 -j input-from-zone0 ' \
              '-m comment --comment "routing input-from-zone0"'),
         )
+
         for data in dataset:
             self.assertEqual(self.firval._generate_routingrule(*data[0]), data[1])
+
+    def test_validate(self):
+        dataset = (
+        )
+        self.firval.validate({ 'rules': {} })
+
+    def test_validate_invalid(self):
+        dataset = (
+            { 'rules': [] },
+            { 'bla': 'ok' },
+        )
+        for data in dataset:
+            self.assertRaises(MultipleInvalid, self.firval.validate, data)
+
+    def test_validate_configerror(self):
+        dataset = (
+            { 'rules': { 'filter input': { 'to zone0': [] }} },
+            { 'rules': { 'nat input': { 'to zone0': [] }} },
+            { 'rules': { 'filter output': { 'from zone1': [] }} },
+        )
+        for data in dataset:
+            self.assertRaises(ConfigError, self.firval.validate, data)
+
+    def test_validate_syschains(self):
+        dataset = (
+            { 'rules': { 'filter forward': {} } },
+            { 'rules': { 'nat prerouting': {} } },
+            { 'rules': { 'nat postrouting': {} } },
+        )
+        for data in dataset:
+            self.firval.validate(data)
+
+        dataset = (
+            { 'rules': { 'randomthing': {} } },
+            { 'rules': { 'nat forward': {} } },
+            { 'rules': { 'multi forward': {} } },
+        )
+        for data in dataset:
+            self.assertRaises(MultipleInvalid, self.firval.validate, data)
 
 
 class FirvalTest(unittest.TestCase):
