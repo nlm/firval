@@ -124,17 +124,20 @@ class Rule(object):
         returns:
             a portspec
         """
-        return ','.join([str(self._get_portnum(port)) for port in value.split(',')])
+        return ','.join([self._get_portnum(port) for port in value.split(',')])
 
     def _get_portnum(self, value):
         """
         get a port number from the port table
+
+        returns:
+            string representing the value
         """
         try:
-            return self.env['ports'][value]
+            return str(self.env['ports'][value])
         except KeyError:
             if re.match(r'^\d+$', value):
-                return value
+                return str(value)
             raise ConfigError("port '{0}' not found".format(value))
 
     @classmethod
