@@ -160,6 +160,8 @@ class Rule(object):
         returns:
             the service associated with the name
         """
+        if service is None:
+            return None
         try:
             proto = None
             types = []
