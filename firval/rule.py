@@ -149,9 +149,6 @@ class Rule(object):
             ports = sorted([int(x) for x in ranges.split('-')])
             portlist.append(':'.join([str(x) for x in ports]))
         return ','.join([str(x) for x in portlist])
-        #return ','.join([str(x) for x in sorted(set(portlist),
-        #                                        lambda x, y: cmp(int(x), int(y)))])
-
 
     def _get_service(self, service):
         """
