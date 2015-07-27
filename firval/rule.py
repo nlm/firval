@@ -33,6 +33,8 @@ class Rule(object):
         'ipspec': r'^\d+(\.\d+){3}(,\d+(\.\d+){3})*$',
     }
 
+    logprefix = '"firval: ACT={action} WHY={why} CHN={chain}{spc}"'
+
     def __init__(self, text, env):
         """
         initializes the Rule object
@@ -211,12 +213,13 @@ class Rule(object):
 
     def make_logrule(self, action):
         ctx = self.env.get('context', {})
+        spc=' ' if self.env['parameters']['log'] == 'log' else ''
         rule = []
         rule.extend(['-j', self.env['parameters']['log']])
         rule.append('--{0}-prefix'.format(self.env['parameters']['log']))
-        rule.append('"firval: ACT={action} CHN={chain}{spc}"'
+        rule.append(self.logprefix \
                     .format(action=action.upper(),
-                            spc=' ' if self.env['parameters']['log'] == 'log' else '',
+                            why='rule', spc=spc,
                             **self.env.get('context', {})))
 
         rule.extend(self.include_module('comment'))

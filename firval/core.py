@@ -59,8 +59,6 @@ class Firval(object):
         'to': ('forward', 'postrouting', 'output')
     }
 
-    _logprefix = 'firval: ACT={action} IZ={in_zone} OZ={out_zone}'
-
     _default_parameters = {
         'auto_accept_ping': False,
         'auto_accept_established': False,
@@ -79,12 +77,27 @@ class Firval(object):
             obj: the datastructure representing the rules
         """
         self.chains = []
-        self.data = self.validate(obj)
+
+        # Work (mostly) on a copy of data
+        obj = dict(obj)
 
         # Add default to parameters
         parameters = dict(self._default_parameters)
-        parameters.update(self.data.get('parameters', {}))
-        self.data['parameters'] = parameters
+        parameters.update(obj.get('parameters', {}))
+        obj['parameters'] = parameters
+        self.data = self.validate(obj)
+
+        # Alter data if needed
+        if self.data['parameters'].get('auto_accept_lo'):
+            self.patch_lo(self.data)
+
+    def patch_lo(self, data):
+        if 'lo' not in data['zones']:
+            data['zones']['lo'] = ['lo']
+        if 'filter input' not in data['rules']:
+            data['rules']['filter input'] = {}
+        if 'from lo' not in data['rules']['filter input']:
+            data['rules']['filter input']['from lo'] = ['accept']
 
     @classmethod
     def _get_tableschains(cls):
@@ -132,6 +145,7 @@ class Firval(object):
                 'auto_accept_ping': bool,
                 'auto_accept_established': bool,
                 'auto_accept_lo': bool,
+                'auto_drop_invalid': bool,
                 'auto_clamp_mss': bool,
                 'reject_with': All(str, In(cls.icmp_reject_types)),
                 'log': All(str, In(['log', 'nflog']))
@@ -215,9 +229,9 @@ class Firval(object):
         get filters for an interface in a zone
         """
         if zone is None or interface is None:
-            return None
+            return []
 
-        if zone not in self.data['zones']:
+        if zone not in self.data.get('zones', {}):
             raise ConfigError('zone "{0}" not in config'.format(zone))
 
         if interface not in self._get_interfaces(zone):
@@ -243,11 +257,12 @@ class Firval(object):
         if fromzone is None and tozone is None:
             return '{0}{1}'.format(basechain.lower(), '-default')
         return '{0}{1}{2}'.format(basechain.lower(),
-                                  '-from-{0}'.format(fromzone.lower()) if fromzone is not None else '',
-                                  '-to-{0}'.format(tozone.lower()) if tozone is not None else '')
+                                  '-from-{0}'.format(fromzone.lower()) \
+                                    if fromzone is not None else '',
+                                  '-to-{0}'.format(tozone.lower()) \
+                                    if tozone is not None else '')
 
-    @classmethod
-    def _generate_routingrule(cls, izone, iif, ozone, oif, basechain, chain):
+    def _generate_routingrule(self, izone, iif, ozone, oif, basechain, chain):
         """
         generates a routing rule according to specs
 
@@ -262,18 +277,49 @@ class Firval(object):
         returns:
             an iptables chain jump rule
         """
-        rule = ['-A', basechain.upper()]
-        if iif is not None:
-            rule.extend(['-i', iif])
-        if oif is not None:
-            rule.extend(['-o', oif])
+        rules = []
 
-        rule.extend(['-j', '{0}'.format(chain).lower()])
-        rule.extend(['-m', 'comment'])
-        rule.extend(['--comment',
-                     '"routing {0}"'.format(cls._build_chainname(basechain,
-                                                                 izone, ozone))])
-        return ' '.join(rule)
+        baserule = ['-A', basechain.upper()]
+        if iif is not None:
+            baserule.extend(['-i', iif])
+        if oif is not None:
+            baserule.extend(['-o', oif])
+
+        routingrule = []
+        logrule = []
+        actrule = []
+
+        ifilters = self._get_interface_filters(izone, iif)
+        ofilters = self._get_interface_filters(ozone, oif)
+
+        # Routing Rule
+        if len(ifilters):
+            routingrule.extend(['-s', ','.join(ifilters)])
+        if len(ofilters):
+            routingrule.extend(['-d', ','.join(ofilters)])
+        routingrule.extend(['-j', chain.lower()])
+        routingrule.extend(['-m', 'comment'])
+        routingrule.extend(['--comment', '"routing {0}"'.format(chain)])
+        rules.append(' '.join(baserule + routingrule))
+
+#        if len(ifilters) or len(ofilters):
+#            spc=' ' if self.data['parameters']['log'] == 'log' else ''
+#            actrule.extend(['-j', 'LOG'])
+#            actrule.extend(['--log-prefix',
+#                            Rule.logprefix.format(action='DROP',
+#                                                  why='intfilter',
+#                                                  chain=basechain.upper())])
+#            actrule.extend(['-m', 'comment'])
+#            actrule.extend(['--comment', '"log interface filter {0}"'.format(chain)])
+#            rules.append(' '.join(baserule + actrule))
+
+        if len(ifilters) or len(ofilters):
+            actrule.extend(['-j', 'DROP'])
+            actrule.extend(['-m', 'comment'])
+            actrule.extend(['--comment', '"interface-filter {0}"'.format(chain)])
+            rules.append(' '.join(baserule + actrule))
+
+        return rules
 
     def generate_rulesdata(self, data, env):
         """
@@ -290,19 +336,19 @@ class Firval(object):
         routing = {}
         custchains = {}
 
-        # Initialize data structs ##############################################
+        # Initialize data structs #############################################
         for table in self._syschains.keys():
             routing[table] = {}
             rules[table] = {}
             for basechain in self._syschains[table]:
                 routing[table][basechain] = []
 
-        # Table (ex: filter) and basechain (ex: input) #########################
+        # Table (ex: filter) and basechain (ex: input) ########################
         for table_chain in data:
 
             table, basechain = re.split(r'\s+', table_chain)
 
-            # From and To informations #########################################
+            # From and To informations ########################################
             for from_to in data[table_chain]:
 
                 # get info needed for generation
@@ -318,19 +364,23 @@ class Firval(object):
                     for oif in oifs or [None]:
 
                         # Generate routing rule text
-                        rulestr = self._generate_routingrule(izone, iif,
-                                                             ozone, oif,
-                                                             basechain,
-                                                             chain)
+                        routingrules = self._generate_routingrule(izone, iif,
+                                                                  ozone, oif,
+                                                                  basechain,
+                                                                  chain)
 
                         # Inserting Rule, most precise first, default comes last
                         if iif is None and oif is None:
-                            routing[table][basechain].append(rulestr)
+                            for rulestr in routingrules:
+                                routing[table][basechain].append(rulestr)
                         elif iif is None or oif is None:
-                            routing[table][basechain].insert(
-                                len(routing[table][basechain]) - 1, rulestr)
+                            for rulestr in routingrules:
+                                routing[table][basechain].insert(
+                                    len(routing[table][basechain]) - 1,
+                                    rulestr)
                         else:
-                            routing[table][basechain].insert(0, rulestr)
+                            for i, rulestr in enumerate(routingrules):
+                                routing[table][basechain].insert(i, rulestr)
 
                 # Create rulechain in the rules table
                 if chain not in rules[table]:
@@ -362,17 +412,21 @@ class Firval(object):
 
                 # Add rules to the rulechain
                 for rule in head_rules + data[table_chain][from_to] + tail_rules:
-                    iptrules = ['-A {0} {1}'.format(chain, iptrule) for iptrule in Rule(rule, env).get_iptrules()]
+                    iptrules = ['-A {0} {1}'.format(chain, iptrule) \
+                                for iptrule in Rule(rule, env).get_iptrules()]
                     rules[table][chain].extend(iptrules)
 
         # Add rules for lo if asked
-        if env['parameters'].get('auto_accept_lo') and 'input-from-lo' not in rules['filter']:
-            # Add routing rule
-            chain = self._build_chainname('input', 'lo', None)
-            rulestr = self._generate_routingrule('lo', 'lo', None, None,
-                                                 'input', chain)
-            routing['filter']['input'].insert(0, rulestr)
-            rules['filter']['input-from-lo'] = ['-A {0} {1}'.format(chain, iptrule) for iptrule in Rule('accept', env).get_iptrules()]
+#        if (env['parameters'].get('auto_accept_lo') and
+#            'input-from-lo' not in rules['filter']):
+#            # Add routing rule
+#            chain = self._build_chainname('input', 'lo', None)
+#            rulestr = self._generate_routingrule('lo', 'lo', None, None,
+#                                                 'input', chain)
+#            routing['filter']['input'].insert(0, rulestr)
+#            rules['filter']['input-from-lo'] = \
+#                ['-A {0} {1}'.format(chain, iptrule) \
+#                    for iptrule in Rule('accept', env).get_iptrules()]
 
         return {'routing': routing, 'rules': rules}
 
@@ -437,7 +491,6 @@ class Firval(object):
         lns.append('COMMIT')
         return lns
 
-
     def __str__(self):
         """
         prints the rules represented by this object
@@ -459,17 +512,14 @@ class Firval(object):
         #for interface in self._get_interfaces('mgt'):
         #    print(interface, self._get_interface_filters('mgt', interface))
 
-        # Base Data Generation #################################################
-        iptdata = self.generate_rulesdata(self.data.get('rules', {}), dict(env))
+        # Base Data Generation ################################################
+        iptdata = self.generate_rulesdata(self.data.get('rules', {}),
+                                          dict(env))
 
-        # Custom Chains Generation #############################################
+        # Custom Chains Generation ############################################
         iptdata['custchains'] = self.generate_customchains(self.data.get('chains', {}), dict(env))
 
-        #from pprint import pprint
-        #pprint(iptdata)
-
-
-        # Rules Output #########################################################
+        # Rules Output ########################################################
         lines.extend(self.generate_ruleslines(iptdata['rules'],
                                               iptdata['routing'],
                                               iptdata['custchains']))
