@@ -150,27 +150,29 @@ class Rule(object):
             portlist.append(':'.join([str(x) for x in ports]))
         return ','.join([str(x) for x in portlist])
 
-    def _get_service(self, service):
+    def _get_service(self, value):
         """
         get a service from the service table
 
         parameters:
-            service: the name associated with the service
+            name: the name associated with the service
 
         returns:
             the service associated with the name
         """
-        if service is None:
+        if value is None:
             return None
         try:
             proto = None
             types = []
             ports = []
-            for service in [self.env['services'][name] for name in service.split(',')]:
+            for service in [self.env['services'][name] for name in value.split(',')]:
                 if proto is None:
                     proto = service['proto']
                 elif proto != service['proto']:
-                    raise ConfigError('Service {0} with proto {1} mixed with proto {2}'.format(name, service['proto'], proto))
+                    raise ConfigError('Service {0} with proto {1} ' \
+                                      'mixed with proto {2}' \
+                                      .format(value, service['proto'], proto))
                 if proto == 'icmp':
                     types.append(service['type'])
                 else:
