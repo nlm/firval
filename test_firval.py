@@ -174,6 +174,12 @@ class RuleTest(unittest.TestCase):
                 'log': 'nflog',
             },
             'services': {
+                'svc0': { 'proto': 'tcp', 'port': 100 },
+                'svc1': { 'proto': 'udp', 'port': '101' },
+                'svc2': { 'proto': 'tcp', 'port': '102,122' },
+                'svc3': { 'proto': 'tcp', 'port': '103-105,106' },
+                'svc4': { 'proto': 'tcp', 'port': '105-103,106' },
+                'svc5': { 'proto': 'icmp', 'type': 'host-unreachable' },
             },
         }
 
@@ -257,6 +263,24 @@ class RuleTest(unittest.TestCase):
         )
         for elt in testset:
             self.assertEqual(rule.portspec_to_mp(elt[0]), elt[1])
+        self.assertRaises(ParseError, rule.portspec_to_mp, '11, 22')
+        self.assertRaises(ParseError, rule.portspec_to_mp, '11:22')
+        self.assertRaises(ParseError, rule.portspec_to_mp, 'INVA_LID')
+        self.assertRaises(ParseError, rule.portspec_to_mp, 'IN VA LID')
+
+    def test_service(self):
+        rule = Rule('accept', self.env)
+        testset = (
+            ('svc0', {'proto': 'tcp', 'port': '100'}),
+            ('svc1', {'proto': 'udp', 'port': '101'}),
+            ('svc2', {'proto': 'tcp', 'port': '102,122'}),
+            ('svc3', {'proto': 'tcp', 'port': '103-105,106'}),
+            ('svc4', {'proto': 'tcp', 'port': '105-103,106'}),
+        )
+        self.assertEqual(rule._get_service(None), None)
+        self.assertRaises(ConfigError, rule._get_service, 'nonexistent')
+        for elt in testset:
+            self.assertEqual(rule._get_service(elt[0]), elt[1])
 
     def test_match_simple(self):
         print()
