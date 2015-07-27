@@ -20,7 +20,8 @@ class Firval(object):
         'zone': r'^\w+$',
         'interface': r'^[\w:.]+$',
         'parameter': r'^\w+$',
-        'fromto': r'^((from\s+(?P<from>\w+)\b)?\s*\b(to\s+(?P<to>\w+))?|(?P<default>default)?)$',
+        'fromto': r'^((from\s+(?P<from>\w+)\b)?\s*\b'\
+                  r'(to\s+(?P<to>\w+))?|(?P<default>default)?)$',
     }
 
     protocols = ('tcp', 'udp', 'icmp')
@@ -60,7 +61,6 @@ class Firval(object):
 
     _logprefix = 'firval: ACT={action} IZ={in_zone} OZ={out_zone}'
 
-    # XXX: review defaults
     _default_parameters = {
         'auto_accept_ping': False,
         'auto_accept_established': False,
@@ -86,7 +86,6 @@ class Firval(object):
         parameters.update(self.data.get('parameters', {}))
         self.data['parameters'] = parameters
 
-
     @classmethod
     def _get_tableschains(cls):
         """
@@ -104,7 +103,6 @@ class Firval(object):
                 chains.append('{0} {1}'.format(table, chain))
         return chains
 
-
     @staticmethod
     def _validate_addr(address):
         """
@@ -117,7 +115,6 @@ class Firval(object):
             an IPNetwork object
         """
         return IPNetwork(address)
-
 
     @classmethod
     def validate(cls, data):
@@ -144,9 +141,9 @@ class Firval(object):
                     Any(
                         # either simple interface
                         All(str, Match(cls.re['interface'])),
-                        { All(str, Match(cls.re['interface'])):
-                            Any(All(str, cls._validate_addr),
-                                [ All(str, cls._validate_addr) ])
+                        {All(str, Match(cls.re['interface'])):
+                             Any(All(str, cls._validate_addr),
+                                 [All(str, cls._validate_addr)])
                         }
                     )
                 ]
@@ -183,15 +180,17 @@ class Firval(object):
 
         # Check constraints like 'input chains don't have output interface'
         for table_chain in data['rules'].keys():
-            basechain = re.split('\s+', table_chain)[1]
+            basechain = re.split(r'\s+', table_chain)[1]
             for from_to in data['rules'][table_chain]:
                 dirinfos = re.match(cls.re['fromto'], from_to).groupdict()
                 for elt in ('from', 'to'):
-                    if dirinfos.get(elt) and basechain not in cls._chainsdir[elt]:
-                        raise ConfigError('"{0}[{1}]": cannot use "{2}" in chain type "{3}"'.format(basechain,
-                                                                                                    from_to,
-                                                                                                    elt,
-                                                                                                    basechain))
+                    if (dirinfos.get(elt) and
+                            basechain not in cls._chainsdir[elt]):
+                        raise ConfigError('"{0}[{1}]": cannot use "{2}" in ' \
+                                          'chain type "{3}"'.format(basechain,
+                                                                    from_to,
+                                                                    elt,
+                                                                    basechain))
         return data
 
     def _get_interfaces(self, zone):
@@ -260,7 +259,7 @@ class Firval(object):
         returns:
             an iptables chain jump rule
         """
-        rule = [ '-A', basechain.upper() ]
+        rule = ['-A', basechain.upper()]
         if iif is not None:
             rule.extend(['-i', iif])
         if oif is not None:
@@ -271,9 +270,7 @@ class Firval(object):
         rule.extend(['--comment',
                      '"routing {0}"'.format(cls._build_chainname(basechain,
                                                                  izone, ozone))])
-
         return ' '.join(rule)
-
 
     def generate_rulesdata(self, data, env):
         """
@@ -300,7 +297,7 @@ class Firval(object):
         # Table (ex: filter) and basechain (ex: input) #########################
         for table_chain in data:
 
-            table, basechain = re.split('\s+', table_chain)
+            table, basechain = re.split(r'\s+', table_chain)
 
             # From and To informations #########################################
             for from_to in data[table_chain]:
@@ -365,8 +362,7 @@ class Firval(object):
                     iptrules = ['-A {0} {1}'.format(chain, iptrule) for iptrule in Rule(rule, env).get_iptrules()]
                     rules[table][chain].extend(iptrules)
 
-        # Add rules for lo-to-lo if asked
-        # XXX add condition
+        # Add rules for lo if asked
         if env['parameters'].get('auto_accept_lo') and 'input-from-lo' not in rules['filter']:
             # Add routing rule
             chain = self._build_chainname('input', 'lo', None)
@@ -375,8 +371,7 @@ class Firval(object):
             routing['filter']['input'].insert(0, rulestr)
             rules['filter']['input-from-lo'] = ['-A {0} {1}'.format(chain, iptrule) for iptrule in Rule('accept', env).get_iptrules()]
 
-        return { 'routing': routing, 'rules': rules }
-
+        return {'routing': routing, 'rules': rules}
 
     @staticmethod
     def generate_customchains(data, env):
@@ -396,7 +391,6 @@ class Firval(object):
                     iptrules = ['-A {0} {1}'.format(chain, iptrule) for iptrule in Rule(rule, env).get_iptrules()]
                     custchains[table][chain].extend(iptrules)
         return custchains
-
 
     @classmethod
     def generate_ruleslines(cls, rules, routing, custchains):
@@ -479,4 +473,3 @@ class Firval(object):
 
         lines.append('# finished {0}'.format(datetime.now()))
         return "\n".join(lines)
-

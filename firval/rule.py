@@ -7,7 +7,7 @@ from .exception import ConfigError, ParseError
 
 class Rule(object):
     """
-    object representing an iptables rule
+    Object representing an iptables rule
     """
 
     pattern = r'^\s*(' + \
@@ -48,7 +48,6 @@ class Rule(object):
         self.modules = []
         self.data = self.parse(text)
 
-
     def __getattr__(self, name):
         """
         retrieves an internal attribute
@@ -62,7 +61,6 @@ class Rule(object):
         if self.data is not None and name in self.data:
             return self.data[name]
         return None
-
 
     @classmethod
     def parse(cls, text):
@@ -82,7 +80,6 @@ class Rule(object):
         else:
             raise ParseError(text)
 
-
     @staticmethod
     def _is_any(value):
         """
@@ -95,7 +92,6 @@ class Rule(object):
             True or False
         """
         return value is None or value == 'any'
-
 
     def _get_address(self, address):
         """
@@ -116,7 +112,6 @@ class Rule(object):
             if re.match(r'^\d+(\.\d+){3}(,\d+(\.\d+){3})*$', address):
                 return address
             raise ConfigError("address '{0}' not found".format(address))
-
 
     def _get_port(self, value):
         """
@@ -185,7 +180,6 @@ class Rule(object):
         except KeyError:
             raise ConfigError('service not found')
 
-
     def _get_chain(self, table, name):
         """
         get a chain from the chains table
@@ -202,10 +196,8 @@ class Rule(object):
         except KeyError:
             return None
 
-
     def __repr__(self):
         return self.__class__.__name__ + '(' + self.text + ')'
-
 
     def include_module(self, modulename):
         if modulename not in self.modules:
@@ -213,30 +205,19 @@ class Rule(object):
             return ['-m', modulename]
         return []
 
-
     def make_logrule(self, action):
         ctx = self.env.get('context', {})
         rule = []
         rule.extend(['-j', self.env['parameters']['log']])
         rule.append('--{0}-prefix'.format(self.env['parameters']['log']))
-#        rule.append('"firval: ACT={action} DIR={mode} IZN={izone} OZN={ozone} CHN={chain}"'\
-#            .format(action=action.upper(),
-#                    mode=ctx.get('basechain', '').upper(),
-#                    izone=ctx.get('izone') or '',
-#                    ozone=ctx.get('ozone') or '',
-#                    chain=ctx.get('chain').upper() or '',
-#            )
-#        )
-        rule.append('"firval: ACT={action} CHN={chain}{spc}"'\
-            .format(action=action.upper(),
-                    chain=ctx.get('chain'),
-                    spc=(' ' if self.env['parameters']['log'] == 'log' else '')))
+        rule.append('"firval: ACT={action} CHN={chain}{spc}"'
+                    .format(action=action.upper(),
+                            spc=' ' if self.env['parameters']['log'] == 'log' else '',
+                            **self.env.get('context', {})))
 
         rule.extend(self.include_module('comment'))
         rule.extend(['--comment', '"log"'])
-
         return ' '.join(rule)
-
 
     def get_iptrules(self):
         """
@@ -272,7 +253,7 @@ class Rule(object):
             if self.src_port_neg is not None:
                 rule.append('!')
             portspec = self._get_port(self.src_port)
-            if re.match('^\d+$', portspec):
+            if re.match(r'^\d+$', portspec):
                 rule.extend(['--sport', str(portspec)])
             else:
                 rule.extend(self.include_module('multiport'))
@@ -285,7 +266,7 @@ class Rule(object):
             if self.dst_port_neg is not None:
                 rule.append('!')
             portspec = self._get_port(self.dst_port)
-            if re.match('^\d+$', portspec):
+            if re.match(r'^\d+$', portspec):
                 rule.extend(['--dport', str(portspec)])
             else:
                 rule.extend(self.include_module('multiport'))
@@ -311,7 +292,7 @@ class Rule(object):
             rule.extend(['-p', service['proto']])
             if service['proto'] in ['tcp', 'udp']:
                 portspec = service['port']
-                if re.match('^\d+$', portspec):
+                if re.match(r'^\d+$', portspec):
                     rule.extend(['--dport', str(portspec)])
                 else:
                     rule.extend(self.include_module('multiport'))
@@ -346,7 +327,7 @@ class Rule(object):
         elif self.action == 'log':
             if self.log_prefix is not None:
                 rule.extend(['--{0}-prefix'.format(self.env['parameters']['log']),
-                            str(self.log_prefix)])
+                             str(self.log_prefix)])
             else:
                 raise ConfigError("log prefix requires 'log' or 'nflog' action")
 
