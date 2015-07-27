@@ -79,44 +79,81 @@ class FirvalCoreSimpleTests(unittest.TestCase):
 
     def test_validate_invalid(self):
         dataset = (
-            { 'rules': [] },
-            { 'bla': 'ok' },
+            {'rules': []},
+            {'bla': 'ok'},
         )
         for data in dataset:
             self.assertRaises(MultipleInvalid, self.firval.validate, data)
 
     def test_validate_configerror(self):
         dataset = (
-            { 'rules': { 'filter input': { 'to zone0': [] }} },
-            { 'rules': { 'nat input': { 'to zone0': [] }} },
-            { 'rules': { 'filter output': { 'from zone1': [] }} },
+            {'rules': {'filter input': {'to zone0': []}}},
+            {'rules': {'nat input': {'to zone0': []}}},
+            {'rules': {'filter output': {'from zone1': []}}},
         )
         for data in dataset:
             self.assertRaises(ConfigError, self.firval.validate, data)
 
     def test_validate_syschains(self):
         dataset = (
-            { 'rules': { 'filter forward': {} } },
-            { 'rules': { 'nat prerouting': {} } },
-            { 'rules': { 'nat postrouting': {} } },
+            {'rules': {'filter forward': {}}},
+            {'rules': {'nat prerouting': {}}},
+            {'rules': {'nat postrouting': {}}},
         )
         for data in dataset:
             self.firval.validate(data)
 
         dataset = (
-            { 'rules': { 'randomthing': {} } },
-            { 'rules': { 'nat forward': {} } },
-            { 'rules': { 'multi forward': {} } },
+            {'rules': {'randomthing': {}}},
+            {'rules': {'nat forward': {}}},
+            {'rules': {'multi forward': {}}},
         )
         for data in dataset:
             self.assertRaises(MultipleInvalid, self.firval.validate, data)
 
 
-class FirvalTest(unittest.TestCase):
+class FirvalCoreTests(unittest.TestCase):
 
     def setUp(self):
-        self.firval = Firval({ 'rules': {} })
+        self.zones = {
+            'zone0': ['eth0', 'eth1'],
+            'zone1': ['eth2', {'eth3': '127.0.0.1'}],
+            'zone2': [{'eth4': ['127.0.0.2', '127.0.0.3']}],
+        }
 
+        self.rules = {
+            'filter forward': {
+                'from zone0': [
+                    'accept'
+                ]
+            }
+        }
+
+
+    def test_get_interfaces(self):
+        firval = Firval({'rules': {}, 'zones': self.zones})
+        self.assertEqual(firval._get_interfaces(None), None)
+        self.assertRaises(ConfigError, firval._get_interfaces, 'nonexistent')
+        self.assertEqual(firval._get_interfaces('zone0'), ['eth0', 'eth1'])
+        self.assertEqual(firval._get_interfaces('zone1'), ['eth2', 'eth3'])
+        self.assertEqual(firval._get_interfaces('zone2'), ['eth4'])
+
+    def test_get_interface_filters(self):
+        firval = Firval({'rules': {}, 'zones': self.zones})
+        self.assertEqual(firval._get_interface_filters(None, 'x'), None)
+        self.assertEqual(firval._get_interface_filters('x', None), None)
+        self.assertRaises(ConfigError, firval._get_interface_filters,
+                          'nonexistent', 'eth0')
+        self.assertRaises(ConfigError, firval._get_interface_filters,
+                          'zone0', 'nonexistent')
+        self.assertRaises(ConfigError, firval._get_interface_filters,
+                          'zone0', 'eth3')
+        self.assertEqual(firval._get_interface_filters('zone0', 'eth0'), [])
+        self.assertEqual(firval._get_interface_filters('zone1', 'eth3'), ['127.0.0.1'])
+
+    def test_generate_rulesdata(self):
+        firval = Firval({'rules': self.rules, 'zones': self.zones})
+        self.assertEqual(len(str(firval)), 669)
 
 class RuleTest(unittest.TestCase):
 
@@ -124,10 +161,14 @@ class RuleTest(unittest.TestCase):
 
         self.env = {
             'addresses': {
-                'port': '127.0.0.9'
+                'addr0': '127.0.1.8',
+                'port': '127.0.0.9',
             },
             'ports': {
-                'port': 9999
+                'port0': 1234,
+                'port1': '5678',
+                'port2': '2233,4455',
+                'port': 9999,
             },
             'parameters': {
                 'log': 'nflog',
@@ -142,9 +183,12 @@ class RuleTest(unittest.TestCase):
             ('masquerade', '-j MASQUERADE -m comment --comment "masquerade"'),
             ('reject', '-j REJECT --reject-with icmp-host-prohibited ' \
                        '-m comment --comment "reject"'),
-            ('clampmss', '-p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu -m comment --comment "clampmss"'),
-            ('log prefix ""', '-j NFLOG --nflog-prefix "" -m comment --comment "log prefix \\"\\""'),
-            ('log prefix "te st"', '-j NFLOG --nflog-prefix "te st" -m comment --comment "log prefix \\"te st\\""'),
+            ('clampmss', '-p tcp --tcp-flags SYN,RST SYN -j TCPMSS ' \
+                         '--clamp-mss-to-pmtu -m comment --comment "clampmss"'),
+            ('log prefix ""', '-j NFLOG --nflog-prefix "" ' \
+                              '-m comment --comment "log prefix \\"\\""'),
+            ('log prefix "te st"', '-j NFLOG --nflog-prefix "te st" ' \
+                                   '-m comment --comment "log prefix \\"te st\\""'),
             ('drop', '-j DROP -m comment --comment "drop"'),
             ('accept from any to any', '-j ACCEPT -m comment --comment "accept from any to any"'),
             ('accept proto tcp', '-p tcp -j ACCEPT -m comment --comment "accept proto tcp"'),
@@ -185,6 +229,34 @@ class RuleTest(unittest.TestCase):
             'accept from port port 22',
             'drop proto tcp type port-unreachable',
         )
+
+    def test_attr(self):
+        rule = Rule('accept', self.env)
+        self.assertEqual(rule.nonexistent, None)
+        self.assertEqual(rule.action, 'accept')
+
+    def test_address(self):
+        rule = Rule('accept', self.env)
+        self.assertEqual(rule._get_address('addr0'), '127.0.1.8')
+        self.assertRaises(ConfigError, rule._get_address, 'nonexistent')
+
+    def test_getportnum(self):
+        rule = Rule('accept', self.env)
+        self.assertEqual(rule._get_portnum('port0'), '1234')
+        self.assertEqual(rule._get_portnum('port1'), '5678')
+        self.assertEqual(rule._get_portnum('port2'), '2233,4455')
+        self.assertRaises(ConfigError, rule._get_portnum, 'nonexistent')
+
+    def test_portspec(self):
+        rule = Rule('accept', self.env)
+        testset = (
+            ('22', '22'),
+            ('32,22', '32,22'),
+            ('11,8000-9000,55', '11,8000:9000,55'),
+            ('11,9000-8000,9-10,55-22,3', '11,8000:9000,9:10,22:55,3'),
+        )
+        for elt in testset:
+            self.assertEqual(rule.portspec_to_mp(elt[0]), elt[1])
 
     def test_match_simple(self):
         print()
