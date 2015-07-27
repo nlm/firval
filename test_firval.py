@@ -180,6 +180,14 @@ class RuleTest(unittest.TestCase):
                 'svc3': { 'proto': 'tcp', 'port': '103-105,106' },
                 'svc4': { 'proto': 'tcp', 'port': '105-103,106' },
                 'svc5': { 'proto': 'icmp', 'type': 'host-unreachable' },
+                'svc6': { 'proto': 'icmp', 'type': 'port-unreachable' },
+            },
+            'custchains': {
+                'input': {
+                    'chain0': [
+                        'accept'
+                    ],
+                },
             },
         }
 
@@ -281,6 +289,21 @@ class RuleTest(unittest.TestCase):
         self.assertRaises(ConfigError, rule._get_service, 'nonexistent')
         for elt in testset:
             self.assertEqual(rule._get_service(elt[0]), elt[1])
+
+        self.assertRaises(ConfigError, rule._get_service, 'svc0,svc1')
+        self.assertEqual(rule._get_service('svc5,svc6'),
+                         {'proto': 'icmp',
+                          'type': 'host-unreachable,port-unreachable'})
+
+    def test_get_chain(self):
+        rule = Rule('accept', self.env)
+        self.assertEqual(rule._get_chain('input', 'chain0'), ['accept'])
+        self.assertEqual(rule._get_chain('input', 'nonexistent'), None)
+        self.assertEqual(rule._get_chain('nonexistent', 'chain0'), None)
+
+    def test_repr(self):
+        rule = Rule('accept', self.env)
+        self.assertEqual(str(rule), 'Rule(accept)')
 
     def test_match_simple(self):
         print()
