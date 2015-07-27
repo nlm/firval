@@ -13,6 +13,7 @@ parameters:
   auto_accept_ping: true
   auto_accept_established: true
   auto_accept_lo: true
+  auto_drop_invalid: true
   auto_clamp_mss: true
   reject_with: 'icmp-host-prohibited'
   log: 'nflog'
