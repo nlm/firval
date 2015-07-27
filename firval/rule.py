@@ -317,7 +317,7 @@ class Rule(object):
 
         # Actions
         if self.action == 'log':
-            rule.extend(['-j', str(self.env['parameters']['log'])])
+            rule.extend(['-j', str(self.env['parameters']['log'].upper())])
         elif self.action is not None:
             rule.extend(['-j', str(self.action.upper())])
 
