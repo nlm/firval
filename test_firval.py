@@ -176,11 +176,13 @@ class RuleTest(unittest.TestCase):
                 'port1': '5678',
                 'port2': '2233,4455',
                 'port': 9999,
+                'port-test': 10000,
             },
             'parameters': {
                 'log': 'nflog',
             },
             'services': {
+                'service-test': { 'proto': 'tcp', 'port': 99 },
                 'svc0': { 'proto': 'tcp', 'port': 100 },
                 'svc1': { 'proto': 'udp', 'port': '101' },
                 'svc2': { 'proto': 'tcp', 'port': '102,122' },
@@ -211,6 +213,8 @@ class RuleTest(unittest.TestCase):
             ('log prefix "te st"', '-j NFLOG --nflog-prefix "te st" ' \
                                    '-m comment --comment "log prefix \\"te st\\""'),
             ('drop', '-j DROP -m comment --comment "drop"'),
+            ('accept to any port port-test proto tcp', '-p tcp --dport 10000 -j ACCEPT -m comment --comment "accept to any port port-test proto tcp"'),
+            ('accept service service-test', '-p tcp --dport 99 -j ACCEPT -m comment --comment "accept service service-test"'),
             ('accept from any to any', '-j ACCEPT -m comment --comment "accept from any to any"'),
             ('accept proto tcp', '-p tcp -j ACCEPT -m comment --comment "accept proto tcp"'),
             ('accept proto udp', '-p udp -j ACCEPT -m comment --comment "accept proto udp"'),

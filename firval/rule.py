@@ -21,7 +21,7 @@ class Rule(object):
         r'(?:(?:\s+(?P<dst_port_neg>not))?\s+port\s+(?P<dst_port>\S+(,\S+)*))?)?' + \
         r'(?:(?:\s+(?P<proto_neg>not))?\s+proto\s+(?P<proto>tcp|udp|icmp|any))?' + \
         r'(?:(?:\s+(?P<icmp_type_neg>not))?\s+type\s+(?P<icmp_type>\S+))?' + \
-        r'(?:\s+service\s+(?P<service>\w+(,\w+)*))?' + \
+        r'(?:\s+service\s+(?P<service>[\w-]+(,[\w-]+)*))?' + \
         r'(?:\s+state\s+(?P<state>new|established|invalid))?' + \
         r'(?:\s+limit\s+(?P<limit>\d+/(s(econd)*|m(inute)*|h(our)*|d(ay)*))' + \
         r'(?:\s+burst\s+(?P<limit_burst>\S+))?)?' + \
