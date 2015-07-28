@@ -16,7 +16,7 @@ class Firval(object):
     The main Firval class
     """
     re = {
-        'object': r'^\w{1,128}$',
+        'object': r'^[\w-]{1,255}$',
         'zone': r'^\w+$',
         'interface': r'^[\w:.]+$',
         'parameter': r'^\w+$',
