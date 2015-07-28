@@ -355,6 +355,12 @@ class Firval(object):
 
             table, basechain = re.split(r'\s+', table_chain)
 
+            # Storage for routing rules
+            routing_inout = []
+            routing_in = []
+            routing_out = []
+            routing_default = []
+
             # From and To informations ########################################
             for from_to in data[table_chain]:
 
@@ -376,18 +382,15 @@ class Firval(object):
                                                                   basechain,
                                                                   chain)
 
-                        # Inserting Rule, most precise first, default comes last
+                        # Classifying routing rules by priority
                         if iif is None and oif is None:
-                            for rulestr in routingrules:
-                                routing[table][basechain].append(rulestr)
-                        elif iif is None or oif is None:
-                            for rulestr in routingrules:
-                                routing[table][basechain].insert(
-                                    len(routing[table][basechain]) - 1,
-                                    rulestr)
+                            routing_default.extend(routingrules)
+                        elif iif is None:
+                            routing_out.extend(routingrules)
+                        elif oif is None:
+                            routing_in.extend(routingrules)
                         else:
-                            for i, rulestr in enumerate(routingrules):
-                                routing[table][basechain].insert(i, rulestr)
+                            routing_inout.extend(routingrules)
 
                 # Create rulechain in the rules table
                 if chain not in rules[table]:
@@ -414,7 +417,8 @@ class Firval(object):
                     head_rules.append('accept state established')
                 if env['parameters'].get('auto_accept_ping'):
                     head_rules.append('accept proto icmp type echo-request')
-                if basechain in ['output', 'forward'] and env['parameters'].get('auto_clamp_mss'):
+                if (basechain in ['output', 'forward'] and
+                    env['parameters'].get('auto_clamp_mss')):
                     head_rules.append('clampmss')
 
                 # Add rules to the rulechain
@@ -423,17 +427,9 @@ class Firval(object):
                                 for iptrule in Rule(rule, env).get_iptrules()]
                     rules[table][chain].extend(iptrules)
 
-        # Add rules for lo if asked
-#        if (env['parameters'].get('auto_accept_lo') and
-#            'input-from-lo' not in rules['filter']):
-#            # Add routing rule
-#            chain = self._build_chainname('input', 'lo', None)
-#            rulestr = self._generate_routingrule('lo', 'lo', None, None,
-#                                                 'input', chain)
-#            routing['filter']['input'].insert(0, rulestr)
-#            rules['filter']['input-from-lo'] = \
-#                ['-A {0} {1}'.format(chain, iptrule) \
-#                    for iptrule in Rule('accept', env).get_iptrules()]
+            # Add all rules to routing, in the right order
+            routing[table][basechain].extend(routing_inout + routing_in + \
+                                             routing_out + routing_default)
 
         return {'routing': routing, 'rules': rules}
 
