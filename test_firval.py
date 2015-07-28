@@ -101,6 +101,7 @@ class FirvalCoreTests(unittest.TestCase):
             'zone0': ['eth0', 'eth1'],
             'zone1': ['eth2', {'eth3': '127.0.0.1'}],
             'zone2': [{'eth4': ['127.0.0.2', '127.0.0.3']}],
+            'zone3': 'eth5',
         }
 
         self.rules = {
@@ -119,6 +120,7 @@ class FirvalCoreTests(unittest.TestCase):
         self.assertEqual(firval._get_interfaces('zone0'), ['eth0', 'eth1'])
         self.assertEqual(firval._get_interfaces('zone1'), ['eth2', 'eth3'])
         self.assertEqual(firval._get_interfaces('zone2'), ['eth4'])
+        self.assertEqual(firval._get_interfaces('zone3'), ['eth5'])
 
     def test_get_interface_filters(self):
         firval = Firval({'rules': {}, 'zones': self.zones})
@@ -131,6 +133,7 @@ class FirvalCoreTests(unittest.TestCase):
         self.assertRaises(ConfigError, firval._get_interface_filters,
                           'zone0', 'eth3')
         self.assertEqual(firval._get_interface_filters('zone0', 'eth0'), [])
+        self.assertEqual(firval._get_interface_filters('zone3', 'eth5'), [])
         self.assertEqual(firval._get_interface_filters('zone1', 'eth3'), ['127.0.0.1'])
 
     def test_generateroutingrule(self):

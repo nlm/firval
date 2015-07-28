@@ -151,16 +151,17 @@ class Firval(object):
                 'log': All(str, In(['log', 'nflog']))
             },
             Optional('zones'): {
-                All(str, Match(cls.re['object'])): [
+                All(str, Match(cls.re['object'])): Any([
                     Any(
-                        # either simple interface
+                        # either simple interface list
                         All(str, Match(cls.re['interface'])),
                         {All(str, Match(cls.re['interface'])):
                              Any(All(str, cls._validate_addr),
                                  [All(str, cls._validate_addr)])
                         }
-                    )
-                ]
+                    )],
+                    Any(str, Match(cls.re['interface'])),
+                )
             },
             Optional('addresses'): {
                 All(str, Match(cls.re['object'])):
@@ -221,8 +222,11 @@ class Firval(object):
             return None
         if zone not in self.data.get('zones', {}):
             raise ConfigError('zone not in config')
-        return [list(elt.keys())[0] if type(elt) is dict else elt \
-                for elt in [iface for iface in self.data['zones'][zone]]]
+        if type(self.data['zones'][zone]) == type(''):
+            return [self.data['zones'][zone]]
+        else:
+            return [list(elt.keys())[0] if type(elt) is dict else elt \
+                    for elt in [iface for iface in self.data['zones'][zone]]]
 
     def _get_interface_filters(self, zone, interface):
         """
@@ -237,9 +241,12 @@ class Firval(object):
         if interface not in self._get_interfaces(zone):
             raise ConfigError('interface "{0}/{1}" not in config'.format(zone, interface))
 
-        return [list(elt.values())[0] for elt \
-                in [iface for iface in self.data['zones'][zone]] \
-                if type(elt) is dict]
+        if type(self.data['zones'][zone]) == type(''):
+            return []
+        else:
+            return [list(elt.values())[0] for elt \
+                    in [iface for iface in self.data['zones'][zone]] \
+                    if type(elt) is dict]
 
     @staticmethod
     def _build_chainname(basechain, fromzone, tozone):
