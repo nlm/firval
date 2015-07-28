@@ -1,0 +1,7 @@
+- accept multizone (from zone0,zone1)
+- add custom log to indicate zone provenance
+- add test to check routing rules order
+- update README
+- allow mixing of multiple services types (tcp,udp)
+- add parameter interface_filter_action (drop|reject)
+- add parameter interface_filter_log (true|false)
