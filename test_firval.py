@@ -165,6 +165,7 @@ class RuleTest(unittest.TestCase):
         self.env = {
             'addresses': {
                 'addr0': '127.0.1.8',
+                'site0-host0': '127.0.2.20',
                 'port': '127.0.0.9',
             },
             'ports': {
@@ -258,6 +259,7 @@ class RuleTest(unittest.TestCase):
     def test_address(self):
         rule = Rule('accept', self.env)
         self.assertEqual(rule._get_address('addr0'), '127.0.1.8')
+        self.assertEqual(rule._get_address('site0-host0'), '127.0.2.20')
         self.assertRaises(ConfigError, rule._get_address, 'nonexistent')
 
     def test_getportnum(self):
