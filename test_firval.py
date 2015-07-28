@@ -247,6 +247,9 @@ class RuleTest(unittest.TestCase):
             'drop proto tcp type port-unreachable',
         )
 
+    def test_rule(self):
+        rule = Rule('accept', self.env)
+
     def test_attr(self):
         rule = Rule('accept', self.env)
         self.assertEqual(rule.nonexistent, None)
@@ -303,6 +306,24 @@ class RuleTest(unittest.TestCase):
         self.assertEqual(rule._get_chain('input', 'chain0'), ['accept'])
         self.assertEqual(rule._get_chain('input', 'nonexistent'), None)
         self.assertEqual(rule._get_chain('nonexistent', 'chain0'), None)
+
+    def test_get_parameter(self):
+        rule = Rule('accept', self.env)
+        self.assertEqual(rule._get_parameter('log'), 'nflog')
+        self.assertEqual(rule._get_parameter('nonexistent'), None)
+
+    def test_include_module(self):
+        rule = Rule('accept', self.env)
+        self.assertEqual(rule.include_module('test'), ['-m', 'test'])
+        self.assertEqual(rule.include_module('test'), [])
+
+    def test_make_logrule(self):
+        env = {'context': {'chain': 'demochain'}}
+        env.update(self.env)
+        rule = Rule('accept', env)
+        goal = '-j NFLOG --nflog-prefix "firval: ACT=ACCEPT WHY=rule ' \
+               'CHN=demochain" -m comment --comment "log"'
+        self.assertEqual(rule.make_logrule('accept'), goal)
 
     def test_repr(self):
         rule = Rule('accept', self.env)
