@@ -106,6 +106,10 @@ rules:
     #to mgt:
     #  - 'accept'
   filter forward:
+    from mgt:
+      - 'reject'
+    to mgt:
+      - 'reject'
     # creates chain forward-mgt-to-sup
     from mgt to sup:
       # accept state established
