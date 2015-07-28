@@ -97,7 +97,7 @@ class Firval(object):
         if 'filter input' not in data['rules']:
             data['rules']['filter input'] = {}
         if 'from lo' not in data['rules']['filter input']:
-            data['rules']['filter input']['from lo'] = ['accept']
+            data['rules']['filter input']['from lo'] = ['auto accept']
 
     @classmethod
     def _get_tableschains(cls):
@@ -412,14 +412,14 @@ class Firval(object):
                 head_rules = []
                 tail_rules = []
                 if env['parameters'].get('auto_drop_invalid'):
-                    head_rules.append('drop state invalid')
+                    head_rules.append('auto drop state invalid')
                 if env['parameters'].get('auto_accept_established'):
-                    head_rules.append('accept state established')
+                    head_rules.append('auto accept state established')
                 if env['parameters'].get('auto_accept_ping'):
-                    head_rules.append('accept proto icmp type echo-request')
+                    head_rules.append('auto accept proto icmp type echo-request')
                 if (basechain in ['output', 'forward'] and
                     env['parameters'].get('auto_clamp_mss')):
-                    head_rules.append('clampmss')
+                    head_rules.append('auto clampmss')
 
                 # Add rules to the rulechain
                 for rule in head_rules + data[table_chain][from_to] + tail_rules:

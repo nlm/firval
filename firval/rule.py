@@ -10,7 +10,7 @@ class Rule(object):
     Object representing an iptables rule
     """
 
-    pattern = r'^\s*(' + \
+    pattern = r'^\s*(auto\s+)?(' + \
         r'(jump\s+(?P<jump_chain>\S+))|' + \
         r'(?P<clampmss>clampmss)|' + \
         r'(?P<setmss>setmss\s+(?P<max_mss>\d+))|' + \
