@@ -202,6 +202,12 @@ class Rule(object):
         except KeyError:
             return None
 
+    def _get_parameter(self, name):
+        try:
+            return self.env['parameters'][name]
+        except KeyError:
+            return None
+
     def __repr__(self):
         return self.__class__.__name__ + '(' + self.text + ')'
 
@@ -213,10 +219,11 @@ class Rule(object):
 
     def make_logrule(self, action):
         ctx = self.env.get('context', {})
-        spc=' ' if self.env['parameters']['log'] == 'log' else ''
+        log = self._get_parameter('log') or 'log'
+        spc = ' ' if log == 'log' else ''
         rule = []
-        rule.extend(['-j', self.env['parameters']['log']])
-        rule.append('--{0}-prefix'.format(self.env['parameters']['log']))
+        rule.extend(['-j', log.upper()])
+        rule.append('--{0}-prefix'.format(log))
         rule.append(self.logprefix \
                     .format(action=action.upper(),
                             why='rule', spc=spc,
@@ -324,7 +331,7 @@ class Rule(object):
 
         # Actions
         if self.action == 'log':
-            rule.extend(['-j', str(self.env['parameters']['log'].upper())])
+            rule.extend(['-j', str(self._get_parameter('log').upper())])
         elif self.action is not None:
             rule.extend(['-j', str(self.action.upper())])
 
@@ -333,7 +340,7 @@ class Rule(object):
             rule.extend(['--reject-with', 'icmp-host-prohibited'])
         elif self.action == 'log':
             if self.log_prefix is not None:
-                rule.extend(['--{0}-prefix'.format(self.env['parameters']['log']),
+                rule.extend(['--{0}-prefix'.format(self._get_parameter('log')),
                              str(self.log_prefix)])
             else:
                 raise ConfigError("log prefix requires 'log' or 'nflog' action")
