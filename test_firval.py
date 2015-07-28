@@ -202,6 +202,7 @@ class RuleTest(unittest.TestCase):
 
         self.checkset = (
             ('accept','-j ACCEPT -m comment --comment "accept"'),
+            ('auto accept','-j ACCEPT -m comment --comment "auto accept"'),
             ('drop', '-j DROP -m comment --comment "drop"'),
             ('masquerade', '-j MASQUERADE -m comment --comment "masquerade"'),
             ('reject', '-j REJECT --reject-with icmp-host-prohibited ' \
