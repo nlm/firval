@@ -26,7 +26,7 @@ setup(
     ],
     entry_points = {
         'console_scripts': [
-            'firval = firval.main:main',
+            'firval2 = firval.main:main',
         ],
     },
 )
