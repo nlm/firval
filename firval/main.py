@@ -24,7 +24,7 @@ def main():
                             help='debug mode')
         args = parser.parse_args()
         if args.file == '-':
-            print(str(Firval(yaml.load(sys.stdin))))
+            print(str(Firval(yaml.safe_load(sys.stdin))))
         else:
             with open(args.file, 'r') as fde:
                 print(str(Firval(yaml.load(fde))))
