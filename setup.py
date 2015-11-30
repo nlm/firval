@@ -3,7 +3,7 @@ from setuptools import setup,find_packages
 setup(
     name = "firval",
     version = "2.0a2",
-    packages = find_packages(),
+    packages = ['firval'],
     author = "Nicolas Limage",
     description = "a netfilter firewall rules generator designed designed to be easy to read, write and maintain",
     license = "MIT",
@@ -29,4 +29,8 @@ setup(
             'firval2 = firval.main:main',
         ],
     },
+    include_package_data = True,
+    package_data = {
+        'firval': ['firval/defaults.yaml']
+    }
 )

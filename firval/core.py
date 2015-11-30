@@ -5,8 +5,8 @@ from datetime import datetime
 from voluptuous import Schema, Required, Optional, Any, All, Invalid, Match, In
 from voluptuous import MultipleInvalid
 from netaddr import IPNetwork
-import yaml
-import argparse
+from yaml import safe_load
+from pkg_resources import resource_string
 
 from .exception import ConfigError, ParseError
 from .rule import Rule
@@ -15,14 +15,12 @@ class Firval(object):
     """
     The main Firval class
     """
-    re = {
-        'object': r'^[\w-]{1,255}$',
-        'zone': r'^\w+$',
-        'interface': r'^[\w:.]+$',
-        'parameter': r'^\w+$',
-        'fromto': r'^((from\s+(?P<from>\w+)\b)?\s*\b'\
-                  r'(to\s+(?P<to>\w+))?|(?P<default>default)?)$',
-    }
+    re = {'object': r'^[\w-]{1,255}$',
+          'zone': r'^\w+$',
+          'interface': r'^[\w:.]+$',
+          'parameter': r'^\w+$',
+          'fromto': r'^((from\s+(?P<from>\w+)\b)?\s*\b'\
+                    r'(to\s+(?P<to>\w+))?|(?P<default>default)?)$'}
 
     protocols = ('tcp', 'udp', 'icmp')
 
@@ -48,28 +46,18 @@ class Firval(object):
                          'icmp-port-unreachable', 'icmp-proto-unreachable',
                          'icmp-net-prohibited', 'icmp-host-prohibited')
 
-    _syschains = {
-        'filter': ('input', 'forward', 'output'),
-        'nat': ('input', 'prerouting', 'output', 'postrouting'),
-        'mangle': ('input', 'prerouting', 'forward', 'output', 'postrouting')
-    }
+    _syschains = {'filter': ('input', 'forward', 'output'),
+                  'nat': ('input', 'prerouting', 'output', 'postrouting'),
+                  'mangle': ('input', 'prerouting', 'forward',
+                             'output', 'postrouting')}
 
-    _chainsdir = {
-        'from': ('input', 'prerouting', 'forward'),
-        'to': ('forward', 'postrouting', 'output')
-    }
+    _chainsdir = {'from': ('input', 'prerouting', 'forward'),
+                  'to': ('forward', 'postrouting', 'output')}
 
-    _default_options = {
-        'auto_accept_ping': False,
-        'auto_accept_established': False,
-        'auto_accept_lo': False,
-        'auto_drop_invalid': False,
-        'auto_clamp_mss': False,
-        'reject_with': 'icmp-host-prohibited',
-        'log': 'log',
-    }
+    _config_sections = ('zones', 'options', 'addresses',
+                        'ports', 'services', 'rules')
 
-    def __init__(self, obj):
+    def __init__(self, obj, defaults=None):
         """
         initializes the object
 
@@ -78,26 +66,22 @@ class Firval(object):
         """
         self.chains = []
 
-        # Work (mostly) on a copy of data
-        obj = dict(obj)
+        # Work on a copy of data
+        obj = (obj or {}).copy()
 
-        # Add default to parameters
-        options = dict(self._default_options)
-        options.update(obj.get('options', {}))
-        obj['options'] = options
+        # Apply defaults
+        if defaults is None:
+            defaults = safe_load(resource_string('firval', 'defaults.yaml'))
+        self.apply_defaults(obj, defaults)
+
+        # Validate
         self.data = self.validate(obj)
 
-        # Alter data if needed
-        if self.data['options'].get('auto_accept_lo'):
-            self.patch_lo(self.data)
-
-    def patch_lo(self, data):
-        if 'lo' not in data['zones']:
-            data['zones']['lo'] = ['lo']
-        if 'filter input' not in data['rules']:
-            data['rules']['filter input'] = {}
-        if 'from lo' not in data['rules']['filter input']:
-            data['rules']['filter input']['from lo'] = ['auto accept']
+    def apply_defaults(self, obj, defaults):
+        for category in self._config_sections:
+            data = defaults.get(category, {}).copy()
+            data.update(obj.get(category, {}))
+            obj[category] = data
 
     @classmethod
     def _get_tableschains(cls):
@@ -144,7 +128,6 @@ class Firval(object):
             Optional('options'): {
                 'auto_accept_ping': bool,
                 'auto_accept_established': bool,
-                'auto_accept_lo': bool,
                 'auto_drop_invalid': bool,
                 'auto_clamp_mss': bool,
                 'reject_with': All(str, In(cls.icmp_reject_types)),

@@ -1,0 +1,132 @@
+options:
+    'auto_accept_ping': False
+    'auto_accept_established': False
+    'auto_drop_invalid': False
+    'auto_clamp_mss': False
+    'reject_with': 'icmp-host-prohibited'
+    'log': 'nflog'
+
+zones:
+  lo: 'lo0'
+
+ports:
+  ssh: 22
+  dns: 53
+
+addresses:
+  localhost: '127.0.0.1'
+
+services:
+  bootp:
+    proto: 'udp'
+    port: 67
+  bgp:
+    proto: 'tcp'
+    port: 179
+  collectd:
+    proto: 'udp'
+    port: 25826
+  conntrackd:
+    proto: 'udp'
+    port: 3780
+  dashing:
+    proto: 'tcp'
+    port: 3030
+  dns:
+    proto: 'udp'
+    port: 53
+  elasticsearch:
+    proto: 'tcp'
+    port: 9200
+  ftp:
+    proto: 'tcp'
+    port: 21
+  ftp-data:
+    proto: 'tcp'
+    port: 20
+  http:
+    proto: 'tcp'
+    port: 80
+  http-alt:
+    proto: 'tcp'
+    port: 8080
+  https:
+    proto: 'tcp'
+    port: 443
+  imap:
+    proto: 'tcp'
+    port: 143
+  imaps:
+    proto: 'tcp'
+    port: 993
+  irc:
+    proto: 'tcp'
+    port: 6667
+  ldap:
+    proto: 'tcp'
+    port: 389
+  ldaps:
+    proto: 'tcp'
+    port: 636
+  nntp:
+    proto: 'tcp'
+    port: 119
+  nrpe:
+    proto: 'tcp'
+    port: 5666
+  ntp:
+    proto: 'udp'
+    port: 123
+  ping:
+    proto: 'icmp'
+    type: 'echo-request'
+  pop3:
+    proto: 'tcp'
+    port: 110
+  pop3s:
+    proto: 'tcp'
+    port: 995
+  postgresql:
+    proto: 'tcp'
+    port: 5432
+  rabbitmq:
+    proto: 'tcp'
+    port: 5672
+  rsync:
+    proto: 'tcp'
+    port: 873
+  salt:
+    proto: 'tcp'
+    port: 4505,4506
+  scsi:
+    proto: 'tcp'
+    port: 860
+  smtp:
+    proto: 'tcp'
+    port: 25
+  snmp:
+    proto: 'udp'
+    port: 161
+  snmptrap:
+    proto: 'udp'
+    port: 162
+  ssh:
+    proto: 'tcp'
+    port: 22
+  submission:
+    proto: 'tcp'
+    port: 587
+  syslog:
+    proto: 'udp'
+    port: 514
+  tftp:
+    proto: 'udp'
+    port: 69
+  tinyproxy:
+    proto: 'tcp'
+    port: 8888
+
+rules:
+  filter input:
+    from lo:
+      - 'accept'
