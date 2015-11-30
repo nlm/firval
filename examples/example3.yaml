@@ -1,0 +1,13 @@
+zones:
+  mgt:
+    - eth0
+  sup:
+    - eth1
+  pub:
+    - eth2
+    - eth3
+
+rules:
+  filter input:
+    from mgt,sup:
+      - accept

@@ -9,7 +9,7 @@ ports:
   mulrange: 10-19,20-29
   mixed: 300,401-420
 
-parameters:
+options:
   auto_accept_ping: true
   auto_accept_established: true
   auto_accept_lo: true
@@ -31,12 +31,14 @@ zones:
   mgt:
     # optional: list or scalar = antispoof
     # not recommended for public interfaces
-    - eth0: '192.168.2.0/24'
-  sup:
-    - eth1
+    - 'eth0': '192.168.2.0/24'
+  sup: 'eth1'
   pub:
-    - eth2
-    - eth3
+    - 'eth2'
+    - 'eth3'
+  other:
+    - 'eth4':
+      - '192.168.5.0/24'
 
 services:
   http:

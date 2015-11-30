@@ -1,0 +1,48 @@
+zones:
+  lo: 'lo'
+  net1: 'eth0'
+  mgt: 'eth0'
+  pub: 'eth0'
+
+addresses:
+  net1: '1.1.1.0/24'
+  host1: '1.1.1.1'
+
+ports:
+  http: 80
+  https: 443
+
+services:
+  http:
+      proto: 'tcp'
+      port: 80
+  dns-udp:
+      proto: 'udp'
+      port: 53
+  ping:
+      proto: 'icmp'
+      type: 'echo-request'
+
+rules:
+
+  filter input:
+      from lo:
+        - 'accept'
+      default:
+        - 'drop'
+
+  filter output:
+      default:
+        - 'accept'
+
+  filter forward:
+      from pub to mgt:
+        - 'accept'
+      from mgt:
+        - 'accept'
+      default:
+        - 'drop'
+
+  nat postrouting:
+      to net1:
+        - 'masquerade'
