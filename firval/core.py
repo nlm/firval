@@ -59,7 +59,7 @@ class Firval(object):
         'to': ('forward', 'postrouting', 'output')
     }
 
-    _default_parameters = {
+    _default_options = {
         'auto_accept_ping': False,
         'auto_accept_established': False,
         'auto_accept_lo': False,
@@ -82,13 +82,13 @@ class Firval(object):
         obj = dict(obj)
 
         # Add default to parameters
-        parameters = dict(self._default_parameters)
-        parameters.update(obj.get('parameters', {}))
-        obj['parameters'] = parameters
+        options = dict(self._default_options)
+        options.update(obj.get('options', {}))
+        obj['options'] = options
         self.data = self.validate(obj)
 
         # Alter data if needed
-        if self.data['parameters'].get('auto_accept_lo'):
+        if self.data['options'].get('auto_accept_lo'):
             self.patch_lo(self.data)
 
     def patch_lo(self, data):
@@ -141,7 +141,7 @@ class Firval(object):
             the validated data structure
         """
         Schema({
-            Optional('parameters'): {
+            Optional('options'): {
                 'auto_accept_ping': bool,
                 'auto_accept_established': bool,
                 'auto_accept_lo': bool,
@@ -411,14 +411,14 @@ class Firval(object):
                 # Add automatic rules
                 head_rules = []
                 tail_rules = []
-                if env['parameters'].get('auto_drop_invalid'):
+                if env['options'].get('auto_drop_invalid'):
                     head_rules.append('auto drop state invalid')
-                if env['parameters'].get('auto_accept_established'):
+                if env['options'].get('auto_accept_established'):
                     head_rules.append('auto accept state established')
-                if env['parameters'].get('auto_accept_ping'):
+                if env['options'].get('auto_accept_ping'):
                     head_rules.append('auto accept proto icmp type echo-request')
                 if (basechain in ['output', 'forward'] and
-                    env['parameters'].get('auto_clamp_mss')):
+                    env['options'].get('auto_clamp_mss')):
                     head_rules.append('auto clampmss')
 
                 # Add rules to the rulechain
@@ -508,7 +508,7 @@ class Firval(object):
             'addresses': self.data.get('addresses', {}),
             'ports': self.data.get('ports', {}),
             'services': self.data.get('services', {}),
-            'parameters': self.data.get('parameters', {}),
+            'options': self.data.get('options', {}),
             'custchains': self.data.get('chains', {}),
         }
 

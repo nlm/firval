@@ -178,7 +178,7 @@ class RuleTest(unittest.TestCase):
                 'port': 9999,
                 'port-test': 10000,
             },
-            'parameters': {
+            'options': {
                 'log': 'nflog',
             },
             'services': {
@@ -317,10 +317,10 @@ class RuleTest(unittest.TestCase):
         self.assertEqual(rule._get_chain('input', 'nonexistent'), None)
         self.assertEqual(rule._get_chain('nonexistent', 'chain0'), None)
 
-    def test_get_parameter(self):
+    def test_get_option(self):
         rule = Rule('accept', self.env)
-        self.assertEqual(rule._get_parameter('log'), 'nflog')
-        self.assertEqual(rule._get_parameter('nonexistent'), None)
+        self.assertEqual(rule._get_option('log'), 'nflog')
+        self.assertEqual(rule._get_option('nonexistent'), None)
 
     def test_include_module(self):
         rule = Rule('accept', self.env)

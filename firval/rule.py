@@ -202,9 +202,9 @@ class Rule(object):
         except KeyError:
             return None
 
-    def _get_parameter(self, name):
+    def _get_option(self, name):
         try:
-            return self.env['parameters'][name]
+            return self.env['options'][name]
         except KeyError:
             return None
 
@@ -219,7 +219,7 @@ class Rule(object):
 
     def make_logrule(self, action):
         ctx = self.env.get('context', {})
-        log = self._get_parameter('log') or 'log'
+        log = self._get_option('log') or 'log'
         spc = ' ' if log == 'log' else ''
         rule = []
         rule.extend(['-j', log.upper()])
@@ -331,7 +331,7 @@ class Rule(object):
 
         # Actions
         if self.action == 'log':
-            rule.extend(['-j', str(self._get_parameter('log').upper())])
+            rule.extend(['-j', str(self._get_option('log').upper())])
         elif self.action is not None:
             rule.extend(['-j', str(self.action.upper())])
 
@@ -340,7 +340,7 @@ class Rule(object):
             rule.extend(['--reject-with', 'icmp-host-prohibited'])
         elif self.action == 'log':
             if self.log_prefix is not None:
-                rule.extend(['--{0}-prefix'.format(self._get_parameter('log')),
+                rule.extend(['--{0}-prefix'.format(self._get_option('log')),
                              str(self.log_prefix)])
             else:
                 raise ConfigError("log prefix requires 'log' or 'nflog' action")
