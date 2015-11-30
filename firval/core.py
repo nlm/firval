@@ -152,14 +152,17 @@ class Firval(object):
             },
             Optional('zones'): {
                 All(str, Match(cls.re['object'])): Any([
+                    # a list
                     Any(
-                        # either simple interface list
+                        # simple interface list (str)
                         All(str, Match(cls.re['interface'])),
+                        # or a list of dict->str or dict->[str]
                         {All(str, Match(cls.re['interface'])):
                              Any(All(str, cls._validate_addr),
                                  [All(str, cls._validate_addr)])
                         }
                     )],
+                    # or simple str
                     Any(str, Match(cls.re['interface'])),
                 )
             },
@@ -206,9 +209,25 @@ class Firval(object):
                                                                     from_to,
                                                                     elt,
                                                                     basechain))
+
+        # Check that an interface only belongs to 1 zone
+        seen_itfs = []
+        for itf in [itf for zone in data['zones']
+                        for itf in cls._get_interfaces(data['zones'][zone])]:
+            if itf in seen_itfs:
+                raise ConfigError('interface "{0}" found in multiple zones'.format(itf))
+            seen_itfs.append(itf)
+
         return data
 
-    def _get_interfaces(self, zone):
+    @staticmethod
+    def _get_interfaces(entry):
+        if type(entry) == type(''):
+            return [entry]
+        return [list(elt.keys())[0] if type(elt) is dict else elt \
+                for elt in [iface for iface in entry]]
+
+    def _get_zone_interfaces(self, zone):
         """
         get interfaces list for a zone
 
@@ -221,14 +240,14 @@ class Firval(object):
         if zone is None:
             return None
         if zone not in self.data.get('zones', {}):
-            raise ConfigError('zone not in config')
+            raise ConfigError('zone "{0}" not in config'.format(zone))
         if type(self.data['zones'][zone]) == type(''):
             return [self.data['zones'][zone]]
         else:
             return [list(elt.keys())[0] if type(elt) is dict else elt \
                     for elt in [iface for iface in self.data['zones'][zone]]]
 
-    def _get_interface_filters(self, zone, interface):
+    def _get_zone_interface_filters(self, zone, interface):
         """
         get filters for an interface in a zone
         """
@@ -238,7 +257,7 @@ class Firval(object):
         if zone not in self.data.get('zones', {}):
             raise ConfigError('zone "{0}" not in config'.format(zone))
 
-        if interface not in self._get_interfaces(zone):
+        if interface not in self._get_zone_interfaces(zone):
             raise ConfigError('interface "{0}/{1}" not in config'.format(zone, interface))
 
         if type(self.data['zones'][zone]) == type(''):
@@ -296,8 +315,8 @@ class Firval(object):
         logrule = []
         actrule = []
 
-        ifilters = self._get_interface_filters(izone, iif)
-        ofilters = self._get_interface_filters(ozone, oif)
+        ifilters = self._get_zone_interface_filters(izone, iif)
+        ofilters = self._get_zone_interface_filters(ozone, oif)
 
         # Routing Rule
         if len(ifilters):
@@ -368,8 +387,8 @@ class Firval(object):
                 fromto_infos = re.match(self.re['fromto'], from_to).groupdict()
                 izone = fromto_infos.get('from')
                 ozone = fromto_infos.get('to')
-                iifs = self._get_interfaces(izone)
-                oifs = self._get_interfaces(ozone)
+                iifs = self._get_zone_interfaces(izone)
+                oifs = self._get_zone_interfaces(ozone)
                 chain = self._build_chainname(basechain, izone, ozone)
 
                 # generate routing rules
@@ -512,8 +531,8 @@ class Firval(object):
             'custchains': self.data.get('chains', {}),
         }
 
-        #for interface in self._get_interfaces('mgt'):
-        #    print(interface, self._get_interface_filters('mgt', interface))
+        #for interface in self._get_zone_interfaces('mgt'):
+        #    print(interface, self._get_zone_interface_filters('mgt', interface))
 
         # Base Data Generation ################################################
         iptdata = self.generate_rulesdata(self.data.get('rules', {}),
