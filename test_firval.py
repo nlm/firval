@@ -115,26 +115,26 @@ class FirvalCoreTests(unittest.TestCase):
 
     def test_get_interfaces(self):
         firval = Firval({'rules': {}, 'zones': self.zones})
-        self.assertEqual(firval._get_interfaces(None), None)
-        self.assertRaises(ConfigError, firval._get_interfaces, 'nonexistent')
-        self.assertEqual(firval._get_interfaces('zone0'), ['eth0', 'eth1'])
-        self.assertEqual(firval._get_interfaces('zone1'), ['eth2', 'eth3'])
-        self.assertEqual(firval._get_interfaces('zone2'), ['eth4'])
-        self.assertEqual(firval._get_interfaces('zone3'), ['eth5'])
+        self.assertEqual(firval._get_zone_interfaces(None), None)
+        self.assertRaises(ConfigError, firval._get_zone_interfaces, 'nonexistent')
+        self.assertEqual(firval._get_zone_interfaces('zone0'), ['eth0', 'eth1'])
+        self.assertEqual(firval._get_zone_interfaces('zone1'), ['eth2', 'eth3'])
+        self.assertEqual(firval._get_zone_interfaces('zone2'), ['eth4'])
+        self.assertEqual(firval._get_zone_interfaces('zone3'), ['eth5'])
 
     def test_get_interface_filters(self):
         firval = Firval({'rules': {}, 'zones': self.zones})
-        self.assertEqual(firval._get_interface_filters(None, 'x'), [])
-        self.assertEqual(firval._get_interface_filters('x', None), [])
-        self.assertRaises(ConfigError, firval._get_interface_filters,
+        self.assertEqual(firval._get_zone_interface_filters(None, 'x'), [])
+        self.assertEqual(firval._get_zone_interface_filters('x', None), [])
+        self.assertRaises(ConfigError, firval._get_zone_interface_filters,
                           'nonexistent', 'eth0')
-        self.assertRaises(ConfigError, firval._get_interface_filters,
+        self.assertRaises(ConfigError, firval._get_zone_interface_filters,
                           'zone0', 'nonexistent')
-        self.assertRaises(ConfigError, firval._get_interface_filters,
+        self.assertRaises(ConfigError, firval._get_zone_interface_filters,
                           'zone0', 'eth3')
-        self.assertEqual(firval._get_interface_filters('zone0', 'eth0'), [])
-        self.assertEqual(firval._get_interface_filters('zone3', 'eth5'), [])
-        self.assertEqual(firval._get_interface_filters('zone1', 'eth3'), ['127.0.0.1'])
+        self.assertEqual(firval._get_zone_interface_filters('zone0', 'eth0'), [])
+        self.assertEqual(firval._get_zone_interface_filters('zone3', 'eth5'), [])
+        self.assertEqual(firval._get_zone_interface_filters('zone1', 'eth3'), ['127.0.0.1'])
 
     def test_generateroutingrule(self):
         firval = Firval({'rules': self.rules, 'zones': self.zones})

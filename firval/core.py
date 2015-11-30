@@ -212,7 +212,7 @@ class Firval(object):
 
         # Check that an interface only belongs to 1 zone
         seen_itfs = []
-        for itf in [itf for zone in data['zones']
+        for itf in [itf for zone in data.get('zones', [])
                         for itf in cls._get_interfaces(data['zones'][zone])]:
             if itf in seen_itfs:
                 raise ConfigError('interface "{0}" found in multiple zones'.format(itf))
