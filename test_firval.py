@@ -10,10 +10,10 @@ from netaddr import AddrFormatError
 class FirvalCoreSimpleTests(unittest.TestCase):
 
     def setUp(self):
-        self.firval = Firval({ 'rules': {} })
+        self.firval = Firval({'rules': {}}, defaults={})
 
     def test_invalid_data(self):
-        self.assertRaises(MultipleInvalid, Firval, {})
+        self.assertRaises(MultipleInvalid, Firval, {'invalid': 'invalid'}, defaults={})
 
     def test_simple(self):
         output = str(self.firval)
@@ -112,7 +112,6 @@ class FirvalCoreTests(unittest.TestCase):
             }
         }
 
-
     def test_get_interfaces(self):
         firval = Firval({'rules': {}, 'zones': self.zones})
         self.assertEqual(firval._get_zone_interfaces(None), None)
@@ -158,8 +157,9 @@ class FirvalCoreTests(unittest.TestCase):
             self.assertEqual(firval._generate_routingrule(*data[0]), [data[1]])
 
     def test_generate_rulesdata(self):
-        firval = Firval({'rules': self.rules, 'zones': self.zones})
+        firval = Firval({'rules': self.rules, 'zones': self.zones}, defaults={})
         self.assertEqual(len(str(firval)), 669)
+
 
 class RuleTest(unittest.TestCase):
 
