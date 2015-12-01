@@ -17,14 +17,16 @@ def main():
     main command-line interface
     """
     try:
+        debug = True
         parser = argparse.ArgumentParser()
-        parser.add_argument('config_file', type=str, default='-',
+        parser.add_argument('config_file', type=str, default='-', nargs='?',
                             help='a yaml config file')
         parser.add_argument('-d', '--debug', action='store_true', default=False,
                             help='debug mode')
         parser.add_argument('-o', '--output', default='-', metavar='output_file',
                             help='output file (default: stdout)')
         args = parser.parse_args()
+        debug = args.debug
 
         rfd = sys.stdin if args.config_file == '-' else open(args.config_file, 'r')
         wfd = sys.stdout if args.output == '-' else open(args.output, 'w')
@@ -47,7 +49,7 @@ def main():
     except KeyboardInterrupt as ex:
         print('# firval: keyboard interrupt')
     except Exception as ex:
-        if args.debug:
+        if debug:
             raise
         print('# firval: error: {0}: {1}' \
               .format(type(ex), str(ex).replace("\n", "")))
