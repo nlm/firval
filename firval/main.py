@@ -18,16 +18,20 @@ def main():
     """
     try:
         parser = argparse.ArgumentParser()
-        parser.add_argument('file', type=str, nargs='?', default='-',
-                            help='a yaml rules file')
+        parser.add_argument('config_file', type=str, default='-',
+                            help='a yaml config file')
         parser.add_argument('-d', '--debug', action='store_true', default=False,
                             help='debug mode')
+        parser.add_argument('-o', '--output', default='-', metavar='output_file',
+                            help='output file (default: stdout)')
         args = parser.parse_args()
-        if args.file == '-':
-            print(str(Firval(yaml.safe_load(sys.stdin))))
-        else:
-            with open(args.file, 'r') as fde:
-                print(str(Firval(yaml.load(fde))))
+
+        rfd = sys.stdin if args.config_file == '-' else open(args.config_file, 'r')
+        wfd = sys.stdout if args.output == '-' else open(args.output, 'w')
+        print(str(Firval(yaml.safe_load(rfd))), file=wfd)
+        rfd.close()
+        wfd.close()
+
     except yaml.parser.ParserError as ex:
         print('# firval: yaml parsing error: {0}' \
               .format(str(ex).replace("\n", "")))

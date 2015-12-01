@@ -14,6 +14,7 @@ class FirvalCoreSimpleTests(unittest.TestCase):
 
     def test_invalid_data(self):
         self.assertRaises(MultipleInvalid, Firval, {'invalid': 'invalid'}, defaults={})
+        self.assertRaises(MultipleInvalid, Firval, {'invalid': 'invalid'})
 
     def test_simple(self):
         output = str(self.firval)
@@ -55,9 +56,7 @@ class FirvalCoreSimpleTests(unittest.TestCase):
             self.assertEqual(self.firval._build_chainname(*data[0]), data[1])
 
     def test_validate(self):
-        dataset = (
-        )
-        self.firval.validate({ 'rules': {} })
+        self.firval.validate({'rules': {}})
 
     def test_validate_invalid(self):
         dataset = (
