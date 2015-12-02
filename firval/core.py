@@ -431,7 +431,7 @@ class Firval(object):
                     head_rules.append('auto accept state established')
                 if env['options'].get('auto_accept_ping'):
                     head_rules.append('auto accept proto icmp type echo-request')
-                if (basechain in ['output', 'forward'] and
+                if (basechain == 'forward' and
                     env['options'].get('auto_clamp_mss')):
                     head_rules.append('auto clampmss')
 
