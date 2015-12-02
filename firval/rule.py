@@ -202,11 +202,11 @@ class Rule(object):
         except KeyError:
             return None
 
-    def _get_option(self, name):
+    def _get_option(self, name, default=None):
         try:
             return self.env['options'][name]
         except KeyError:
-            return None
+            return default
 
     def __repr__(self):
         return self.__class__.__name__ + '(' + self.text + ')'
@@ -219,7 +219,7 @@ class Rule(object):
 
     def make_logrule(self, action):
         ctx = self.env.get('context', {})
-        log = self._get_option('log') or 'log'
+        log = self._get_option('log_backend', 'log')
         spc = ' ' if log == 'log' else ''
         rule = []
         rule.extend(['-j', log.upper()])
@@ -331,16 +331,17 @@ class Rule(object):
 
         # Actions
         if self.action == 'log':
-            rule.extend(['-j', str(self._get_option('log').upper())])
+            rule.extend(['-j', str(self._get_option('log_backend', 'log').upper())])
         elif self.action is not None:
             rule.extend(['-j', str(self.action.upper())])
 
         # Actions parameters
         if self.action == 'reject':
-            rule.extend(['--reject-with', 'icmp-host-prohibited'])
+            rule.extend(['--reject-with',
+                         self._get_option('reject_with', 'icmp-host-prohibited')])
         elif self.action == 'log':
             if self.log_prefix is not None:
-                rule.extend(['--{0}-prefix'.format(self._get_option('log')),
+                rule.extend(['--{0}-prefix'.format(self._get_option('log_backend', 'log')),
                              str(self.log_prefix)])
             else:
                 raise ConfigError("log prefix requires 'log' or 'nflog' action")

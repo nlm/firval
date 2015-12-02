@@ -4,7 +4,9 @@ options:
     'auto_drop_invalid': False
     'auto_clamp_mss': False
     'reject_with': 'icmp-host-prohibited'
-    'log': 'nflog'
+    'log_backend': 'nflog'
+    'log_zone_filters': true
+    'zone_filters_action': 'REJECT'
 
 zones:
   lo: 'lo'

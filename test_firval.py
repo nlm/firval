@@ -147,7 +147,7 @@ class FirvalCoreTests(unittest.TestCase):
 #            ((None, None, 'zone1', 'eth2', 'forward', 'forward-to-zone1'),
 #             '-A FORWARD -o eth2 -j forward-to-zone1 ' \
 #             '-m comment --comment "routing forward-to-zone1"'),
-            (('zone0', 'eth0', None, None, 'input', 'input-from-zone0'),
+            (({}, 'zone0', 'eth0', None, None, 'input', 'input-from-zone0'),
              '-A INPUT -i eth0 -j input-from-zone0 ' \
              '-m comment --comment "routing input-from-zone0"'),
         )
@@ -178,7 +178,7 @@ class RuleTest(unittest.TestCase):
                 'port-test': 10000,
             },
             'options': {
-                'log': 'nflog',
+                'log_backend': 'nflog',
             },
             'services': {
                 'service-test': { 'proto': 'tcp', 'port': 99 },
@@ -318,7 +318,7 @@ class RuleTest(unittest.TestCase):
 
     def test_get_option(self):
         rule = Rule('accept', self.env)
-        self.assertEqual(rule._get_option('log'), 'nflog')
+        self.assertEqual(rule._get_option('log_backend'), 'nflog')
         self.assertEqual(rule._get_option('nonexistent'), None)
 
     def test_include_module(self):

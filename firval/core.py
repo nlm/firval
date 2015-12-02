@@ -57,6 +57,8 @@ class Firval(object):
     _config_sections = ('zones', 'options', 'addresses',
                         'ports', 'services', 'rules')
 
+    _zone_filters_actions = ('REJECT', 'DROP')
+
     def __init__(self, obj, defaults=None):
         """
         initializes the object
@@ -130,8 +132,10 @@ class Firval(object):
                 'auto_accept_established': bool,
                 'auto_drop_invalid': bool,
                 'auto_clamp_mss': bool,
+                'zone_filters_action': All(str, In(cls._zone_filters_actions)),
                 'reject_with': All(str, In(cls.icmp_reject_types)),
-                'log': All(str, In(['log', 'nflog']))
+                'log_backend': All(str, In(['log', 'nflog'])),
+                'log_zone_filters': bool,
             },
             Optional('zones'): {
                 All(str, Match(cls.re['object'])): Any([
@@ -271,7 +275,7 @@ class Firval(object):
                                   '-to-{0}'.format(tozone.lower()) \
                                     if tozone is not None else '')
 
-    def _generate_routingrule(self, izone, iif, ozone, oif, basechain, chain):
+    def _generate_routingrule(self, env, izone, iif, ozone, oif, basechain, chain):
         """
         generates a routing rule according to specs
 
@@ -288,20 +292,18 @@ class Firval(object):
         """
         rules = []
 
-        baserule = ['-A', basechain.upper()]
+        rulebase = ['-A', basechain.upper()]
         if iif is not None:
-            baserule.extend(['-i', iif])
+            rulebase.extend(['-i', iif])
         if oif is not None:
-            baserule.extend(['-o', oif])
+            rulebase.extend(['-o', oif])
 
-        routingrule = []
-        logrule = []
-        actrule = []
 
         ifilters = self._get_zone_interface_filters(izone, iif)
         ofilters = self._get_zone_interface_filters(ozone, oif)
 
         # Routing Rule
+        routingrule = []
         if len(ifilters):
             routingrule.extend(['-s', ','.join(ifilters)])
         if len(ofilters):
@@ -309,24 +311,33 @@ class Firval(object):
         routingrule.extend(['-j', chain.lower()])
         routingrule.extend(['-m', 'comment'])
         routingrule.extend(['--comment', '"routing {0}"'.format(chain)])
-        rules.append(' '.join(baserule + routingrule))
+        rules.append(' '.join(rulebase + routingrule))
 
-#        if len(ifilters) or len(ofilters):
-#            spc=' ' if self.data['parameters']['log'] == 'log' else ''
-#            actrule.extend(['-j', 'LOG'])
-#            actrule.extend(['--log-prefix',
-#                            Rule.logprefix.format(action='DROP',
-#                                                  why='intfilter',
-#                                                  chain=basechain.upper())])
-#            actrule.extend(['-m', 'comment'])
-#            actrule.extend(['--comment', '"log interface filter {0}"'.format(chain)])
-#            rules.append(' '.join(baserule + actrule))
+        # Log Rule
+        if ((len(ifilters) or len(ofilters)) and
+            env['options'].get('log_zone_filters', False)):
+            logbackend = env['options'].get('log_backend', 'LOG').upper()
+            logrule = ['-j', logbackend]
+            logrule.extend(['--log-prefix',
+                            Rule.logprefix.format(action=env['options']
+                                                         .get('zone_filters_action',
+                                                              'drop').upper(),
+                                                  why='zonefilter',
+                                                  chain=basechain.upper(),
+                                                  spc=' ' if logbackend == 'log' else '',
+                                                  )])
+                                                  #**env.get('context', {}))])
+            logrule.extend(['-m', 'comment'])
+            logrule.extend(['--comment', '"log zone filter {0}"'.format(chain)])
+            rules.append(' '.join(rulebase + logrule))
 
+        # Action Rule
+        actrule = []
         if len(ifilters) or len(ofilters):
             actrule.extend(['-j', 'DROP'])
             actrule.extend(['-m', 'comment'])
-            actrule.extend(['--comment', '"interface-filter {0}"'.format(chain)])
-            rules.append(' '.join(baserule + actrule))
+            actrule.extend(['--comment', '"zone filter {0}"'.format(chain)])
+            rules.append(' '.join(rulebase + actrule))
 
         return rules
 
@@ -379,7 +390,8 @@ class Firval(object):
                     for oif in oifs or [None]:
 
                         # Generate routing rule text
-                        routingrules = self._generate_routingrule(izone, iif,
+                        routingrules = self._generate_routingrule(env,
+                                                                  izone, iif,
                                                                   ozone, oif,
                                                                   basechain,
                                                                   chain)
