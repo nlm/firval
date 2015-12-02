@@ -7,11 +7,36 @@ options:
     'log': 'nflog'
 
 zones:
-  lo: 'lo0'
+  lo: 'lo'
 
 ports:
-  ssh: 22
+  bootp: 67
+  bgp: 179
   dns: 53
+  ftp: 21
+  ftp-data: 20
+  http: 80
+  https: 443
+  imap: 143
+  imaps: 993
+  irc: 6667
+  ldap: 389
+  ldaps: 636
+  mysql: 3306
+  nntp: 119
+  nrpe: 5666
+  ntp: 123
+  pop3: 110
+  pop3s: 995
+  postgresql: 5432
+  rsync: 873
+  smtp: 25
+  snmp: 161
+  snmptrap: 162
+  ssh: 22
+  submission: 587
+  syslog: 514
+  tftp: 69
 
 addresses:
   localhost: '127.0.0.1'
@@ -23,21 +48,9 @@ services:
   bgp:
     proto: 'tcp'
     port: 179
-  collectd:
-    proto: 'udp'
-    port: 25826
-  conntrackd:
-    proto: 'udp'
-    port: 3780
-  dashing:
-    proto: 'tcp'
-    port: 3030
   dns:
     proto: 'udp'
     port: 53
-  elasticsearch:
-    proto: 'tcp'
-    port: 9200
   ftp:
     proto: 'tcp'
     port: 21
@@ -68,6 +81,9 @@ services:
   ldaps:
     proto: 'tcp'
     port: 636
+  mysql:
+    proto: 'tcp'
+    port: 3306
   nntp:
     proto: 'tcp'
     port: 119
@@ -89,9 +105,6 @@ services:
   postgresql:
     proto: 'tcp'
     port: 5432
-  rabbitmq:
-    proto: 'tcp'
-    port: 5672
   rsync:
     proto: 'tcp'
     port: 873
@@ -122,9 +135,6 @@ services:
   tftp:
     proto: 'udp'
     port: 69
-  tinyproxy:
-    proto: 'tcp'
-    port: 8888
 
 rules:
   filter input:
