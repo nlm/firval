@@ -526,9 +526,6 @@ class Firval(object):
             'custchains': self.data.get('chains', {}),
         }
 
-        #for interface in self._get_zone_interfaces('mgt'):
-        #    print(interface, self._get_zone_interface_filters('mgt', interface))
-
         # Base Data Generation ################################################
         iptdata = self.generate_rulesdata(self.data.get('rules', {}),
                                           dict(env))
